@@ -1,0 +1,34 @@
+# Dependencies
+
+node_modules/
+
+# Environment files
+
+.env
+.env.*
+
+# Build files
+
+dist/
+build/
+
+# Logs
+
+logs/
+*.log
+
+# Kubernetes secrets
+
+secret.yaml
+secrets.yaml
+*kube-secret*
+
+# IDE
+
+.vscode/
+.idea/
+
+# OS files
+
+.DS_Store
+Thumbs.db
