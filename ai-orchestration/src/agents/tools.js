@@ -59,7 +59,7 @@ export const updateFiles = tool(
 
     writer("Updating files..." + files.map((f) => f.file).join(",") + "\n");
     const response = await axios.patch(
-      `http://sandbox-service-${config.context.projectId}.agent.localhost/update-files`,
+      `http://sandbox-service-${config.context.projectId}:3000/update-files`,
       { updates: files },
     );
 

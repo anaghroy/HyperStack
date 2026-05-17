@@ -19,8 +19,8 @@ logs/
 
 # Kubernetes secrets
 
-secret.yaml
-secrets.yaml
+secret.yml
+secrets.yml
 *kube-secret*
 
 # IDE

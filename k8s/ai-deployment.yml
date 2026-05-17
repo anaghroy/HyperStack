@@ -17,35 +17,34 @@ spec:
       containers:
         - image: ai-orchestration
           name: ai-server
+          env:
+            - name: NVIDIA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ai-secret
+                  key: NVIDIA_API_KEY
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ai-secret
+                  key: GROQ_API_KEY
+            - name: COHERE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ai-secret
+                  key: COHERE_API_KEY
+            - name: AI_MODEL
+              valueFrom:
+                secretKeyRef:
+                  name: ai-secret
+                  key: AI_MODEL
           resources:
             requests:
               cpu: "250m"
-              memory: "128M"
+              memory: "128Mi"
             limits:
               cpu: "500m"
-              memory: "256M"
-            env:
-              - name: NVIDIA_API_KEY
-                valueFrom:
-                  secretKeyRef:
-                    name: ai-secret
-                    key: NVIDIA_API_KEY
-              - name: GROQ_API_KEY
-                valueFrom:
-                  secretKeyRef:
-                    name: ai-secret
-                    key: GROQ_API_KEY
-              - name: COHERE_API_KEY
-                valueFrom:
-                  secretKeyRef:
-                    name: ai-secret
-                    key: COHERE_API_KEY
-              - name: AI_MODEL
-                valueFrom:
-                  secretKeyRef:
-                    name: ai-secret
-                    key: AI_MODEL
-
+              memory: "256Mi"
           livenessProbe:
             httpGet:
               path: /api/status/healthz

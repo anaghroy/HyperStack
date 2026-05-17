@@ -7,17 +7,19 @@ const agentRouter = Router();
 agentRouter.post("/invoke", async (req, res) => {
   try {
     const { message, projectId } = req.body;
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
     });
 
-    if (!message) {
-      return res.status(400).json({ error: "Message is required" });
-    }
 
-    const response = await agent.invoke(
+    console.log("Starting AI invoke");
+    const response = await agent.stream(
       {
         messages: [
           {
@@ -35,20 +37,28 @@ agentRouter.post("/invoke", async (req, res) => {
           projectId,
         },
         streamMode: "custom",
-      });
+      },
+    );
 
     for await (const chunk of response) {
       console.log(chunk);
       res.write(`data: ${chunk}\n\n`);
     }
 
-    res.json({ response });
+    res.end();
+
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
-      success: false,
-      error: "Failed to invoke agent",
-    });
+    if (res.headersSent) {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      return res.end();
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
   }
 });
 

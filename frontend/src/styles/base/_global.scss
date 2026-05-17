@@ -1,0 +1,31 @@
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  scroll-behavior: smooth;
+}
+body {
+  min-height: 100vh;
+  font-family: var(--font-sans), sans-serif;
+  color: var(--color-text-primary);
+  background-color: var(--color-primary);
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+/*scrollbar-background*/
+::-webkit-scrollbar {
+  background-color: #000000;
+  width: 5px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(166, 166, 166, 0.523);
+  border-radius: 50px;
+}

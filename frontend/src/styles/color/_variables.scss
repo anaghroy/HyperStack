@@ -1,0 +1,39 @@
+:root {
+/* Primary Brand */
+--color-primary: #ca8e56;
+--color-primary-dark: #763b16;
+--color-primary-darker: #45220d;
+
+/* Background / Surface */
+--color-background: #f8e5ce;
+--color-surface: #f7d196;
+
+/* Text */
+--color-text-primary: #45220d;
+--color-text-secondary: #763b16;
+--color-text-light: #ca8e56;
+
+/* Borders */
+--color-border: #ca8e56;
+
+/* Hover States */
+--color-hover: #b67d48;
+--color-hover-dark: #5f2f12;
+
+/* Buttons */
+--color-button-primary: #763b16;
+--color-button-primary-hover: #45220d;
+--color-button-text: #f8e5ce;
+
+/* Cards */
+--color-card-bg: #f7d196;
+--color-card-border: #ca8e56;
+
+/* Input */
+--color-input-bg: #f8e5ce;
+--color-input-border: #ca8e56;
+--color-input-focus: #763b16;
+
+/* Shadows */
+--shadow-primary: 0 4px 20px rgba(69, 34, 13, 0.15);
+}
