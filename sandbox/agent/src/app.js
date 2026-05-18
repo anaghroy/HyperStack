@@ -19,8 +19,11 @@ app.use(express.urlencoded({ extended: true }));
 const io = new Server(httpServer, {
   cors: {
     origin: "*",
-    methods: ["GET", "POST", "PATCH"],
+    methods: ["GET", "POST", "PATCH", "OPTIONS"],
   },
+  transports: ["websocket", "polling"],
+  allowUpgrades: true,
+  perMessageDeflate: false,
 });
 
 app.get("/", (req, res) => {
@@ -39,8 +42,8 @@ const ptyProcess = pty.spawn(shell, [], {
   env: process.env,
 });
 
-ptyProcess.on("data", (data) => {
-  io.emit("pty_output", data);
+ptyProcess.onData((data) => {
+  io.emit("terminal-output", data);
 });
 
 ptyProcess.onExit(({ exitCode, signal }) => {
