@@ -6,7 +6,6 @@ export async function createPod(sandboxId) {
     metadata: {
       name: `sandbox-pod-${sandboxId}`,
       labels: {
-        app: "sandbox",
         sandboxId: sandboxId,
       },
     },
@@ -75,4 +74,17 @@ export async function createPod(sandboxId) {
   });
 
   return response;
+}
+
+export async function deletePod(sandboxId) {
+  try {
+    const response = await K8sCoreV1Api.deleteNamespacedPod({
+      name: `sandbox-pod-${sandboxId}`,
+      namespace: "default",
+    }, {gracePeriodSeconds: 0}); // Force delete the pod immediately
+    return response;
+  } catch (error) {
+    console.error("Error deleting pod:", error);
+    throw error;
+  }
 }

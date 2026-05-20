@@ -17,9 +17,8 @@ agentRouter.post("/invoke", async (req, res) => {
       Connection: "keep-alive",
     });
 
-
-    console.log("Starting AI invoke");
-    const response = await agent.stream(
+    const writer = (text) => res.write(text);
+    const stream = await agent.stream(
       {
         messages: [
           {
@@ -35,18 +34,34 @@ agentRouter.post("/invoke", async (req, res) => {
       {
         context: {
           projectId,
+          writer,
         },
-        streamMode: "custom",
+        streamMode: "values",
       },
     );
 
-    for await (const chunk of response) {
-      console.log(chunk);
-      res.write(`data: ${chunk}\n\n`);
+    let lastState = null;
+    for await (const state of stream) {
+      lastState = state;
+    }
+
+    if (lastState?.messages?.length) {
+      const msgs = lastState.messages;
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        const m = msgs[i];
+        const role = m.role ?? m._getType?.();
+        if ((role === "ai" || role === "assistant") && !m.tool_calls?.length) {
+          const content =
+            typeof m.content === "string"
+              ? m.content
+              : JSON.stringify(m.content);
+          res.write(content + "\n");
+          break;
+        }
+      }
     }
 
     res.end();
-
   } catch (error) {
     console.error(error);
     if (res.headersSent) {
@@ -58,7 +73,6 @@ agentRouter.post("/invoke", async (req, res) => {
         error: error.message,
       });
     }
-
   }
 });
 

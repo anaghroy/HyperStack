@@ -6,6 +6,7 @@ import http from "http";
 import { Server } from "socket.io";
 import pty from "node-pty";
 import os from "os";
+import cors from "cors";
 
 const WORKING_DIR = "/workspace"; // This is the directory where all the project files will be stored
 
@@ -13,6 +14,7 @@ const app = express();
 const httpServer = http.createServer(app);
 app.use(morgan("dev"));
 
+app.use(cors({ origin: "*", methods: ["GET", "POST", "PATCH", "DELETE"] }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

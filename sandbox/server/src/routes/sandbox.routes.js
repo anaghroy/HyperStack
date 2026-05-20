@@ -2,6 +2,7 @@ import express from "express";
 import { createPod } from "../kubernetes/pod.js";
 import { createService } from "../kubernetes/service.js";
 import { v7 as uuid } from "uuid";
+import { createSandboxKey } from '../config/redis.js';
 
 const router = express.Router();
 
@@ -20,6 +21,7 @@ router.post("/start", async (req, res) => {
     await Promise.all([
       createPod(sandboxId), // Create pod
       createService(sandboxId), // Create service
+      createSandboxKey(sandboxId), // Create sandbox key in Redis
     ]);
 
     return res.status(201).json({

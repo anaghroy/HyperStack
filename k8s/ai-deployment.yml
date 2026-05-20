@@ -21,22 +21,22 @@ spec:
             - name: NVIDIA_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: ai-secret
+                  name: app-secret
                   key: NVIDIA_API_KEY
             - name: GROQ_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: ai-secret
+                  name: app-secret
                   key: GROQ_API_KEY
             - name: COHERE_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: ai-secret
+                  name: app-secret
                   key: COHERE_API_KEY
             - name: AI_MODEL
               valueFrom:
                 secretKeyRef:
-                  name: ai-secret
+                  name: app-secret
                   key: AI_MODEL
           resources:
             requests:

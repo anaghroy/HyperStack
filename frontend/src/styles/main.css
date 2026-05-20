@@ -1,34 +1,113 @@
-/* Inter */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-sans), sans-serif;
+  color: var(--color-text-primary);
+  background-color: var(--color-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/*scrollbar-background*/
+::-webkit-scrollbar {
+  background-color: #000000;
+  width: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(166, 166, 166, 0.523);
+  border-radius: 50px;
+}
+
+/* Inter Font Family */
 @font-face {
   font-family: "Inter";
-  src: url("/frontend/src/assets/fonts/Inter-Regular.otf") format("otf");
+  src: url("/frontend/src/assets/fonts/Inter-Regular.otf") format("opentype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "Inter";
-  src: url("/frontend/src/assets/fonts/Inter-Medium.otf") format("otf");
+  src: url("/frontend/src/assets/fonts/Inter-Medium.otf") format("opentype");
   font-weight: 500;
+  font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: "Inter";
-  src: url("/frontend/src/assets/fonts/Inter-SemiBold.otf") format("otf");
+  src: url("/frontend/src/assets/fonts/Inter-SemiBold.otf") format("opentype");
   font-weight: 600;
+  font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: "Inter";
-  src: url("/frontend/src/assets/fonts/Inter-Bold.otf") format("otf");
+  src: url("/frontend/src/assets/fonts/Inter-Bold.otf") format("opentype");
   font-weight: 700;
+  font-style: normal;
+  font-display: swap;
 }
 /* JetBrains Mono */
 @font-face {
   font-family: "JetBrains Mono";
-  src: url("/frontend/src/assets/fonts/JetBrainsMono-Regular.ttf") format("ttf");
+  src: url("/frontend/src/assets/fonts/JetBrainsMono-Regular.ttf") format("truetype");
   font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: "JetBrains Mono";
-  src: url("/frontend/src/assets/fonts/JetBrainsMono-Medium.ttf") format("ttf");
+  src: url("/frontend/src/assets/fonts/JetBrainsMono-Medium.ttf") format("truetype");
   font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+/* Root Variables */
+:root {
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+:root {
+  /* Primary Brand */
+  --color-primary: #ca8e56;
+  --color-primary-dark: #763b16;
+  --color-primary-darker: #45220d;
+  /* Background / Surface */
+  --color-background: #f8e5ce;
+  --color-surface: #f7d196;
+  /* Text */
+  --color-text-primary: #45220d;
+  --color-text-secondary: #763b16;
+  --color-text-light: #ca8e56;
+  /* Borders */
+  --color-border: #ca8e56;
+  /* Hover States */
+  --color-hover: #b67d48;
+  --color-hover-dark: #5f2f12;
+  /* Buttons */
+  --color-button-primary: #763b16;
+  --color-button-primary-hover: #45220d;
+  --color-button-text: #f8e5ce;
+  /* Cards */
+  --color-card-bg: #f7d196;
+  --color-card-border: #ca8e56;
+  /* Input */
+  --color-input-bg: #f8e5ce;
+  --color-input-border: #ca8e56;
+  --color-input-focus: #763b16;
+  /* Shadows */
+  --shadow-primary: 0 4px 20px rgba(69, 34, 13, 0.15);
 }/*# sourceMappingURL=main.css.map */
