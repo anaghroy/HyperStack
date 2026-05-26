@@ -1,3 +1,12 @@
 @use "./base/global";
 @use "./typography/fonts";
 @use "./color/variables";
+
+/* Components */
+@use "./components/layout";
+@use "./components/explorer";
+@use "./components/editor";
+@use "./components/panels";
+@use "./components/aichat";
+@use "./components/auth";
+@use "./pages/dashboard";

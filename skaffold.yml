@@ -11,8 +11,17 @@ build:
       sync:
         infer:
           - "src/**"
+
     - image: auth
       context: auth
+      docker:
+        dockerfile: dockerfile
+      sync:
+        infer:
+          - "src/**"
+
+    - image: notification
+      context: notification
       docker:
         dockerfile: dockerfile
       sync:
@@ -23,14 +32,23 @@ build:
       context: sandbox/agent
       docker:
         dockerfile: dockerfile
+      sync:
+        infer:
+          - "src/**"
     - image: router
       context: sandbox/router
       docker:
         dockerfile: dockerfile
+      sync:
+        infer:
+          - "src/**"
     - image: sandbox
       context: sandbox/server
       docker:
         dockerfile: dockerfile
+      sync:
+        infer:
+          - "src/**"
     - image: template
       context: sandbox/templates
       docker:
@@ -42,10 +60,15 @@ manifests:
     - k8s/ai-service.yml
     - k8s/router-deployment.yml
     - k8s/router-service.yml
+    - k8s/notification-deployment.yml
+    - k8s/notification-service.yml
+    - k8s/rbac.yml
     - k8s/sandbox-deployment.yml
     - k8s/sandbox-service.yml
     - k8s/auth-deployment.yml
     - k8s/auth-service.yml
+    - k8s/rabbitmq-deployment.yml
+    - k8s/rabbitmq-service.yml
     - k8s/secret.yml
     - k8s/ingress.yml
 

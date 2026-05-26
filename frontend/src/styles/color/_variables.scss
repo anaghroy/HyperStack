@@ -1,39 +1,39 @@
 :root {
-/* Primary Brand */
---color-primary: #ca8e56;
---color-primary-dark: #763b16;
---color-primary-darker: #45220d;
+  /* Primary Brand */
+  --color-primary: #0078D4;
+  --color-primary-dark: #5b8cff;
+  --color-primary-darker: #131111;
 
-/* Background / Surface */
---color-background: #f8e5ce;
---color-surface: #f7d196;
+  /* Background / Surface */
+  --color-background: #181818;
+  --color-surface: #121111;
 
-/* Text */
---color-text-primary: #45220d;
---color-text-secondary: #763b16;
---color-text-light: #ca8e56;
+  /* Text */
+  --color-text-primary: #e6edf7;
+  --color-text-secondary: #a9b7d0;
+  --color-text-light: #8ab4ff;
 
-/* Borders */
---color-border: #ca8e56;
+  /* Borders */
+  --color-border: #343538;
 
-/* Hover States */
---color-hover: #b67d48;
---color-hover-dark: #5f2f12;
+  /* Hover States */
+  --color-hover: #6ea1ff;
+  --color-hover-dark: #456fd6;
 
-/* Buttons */
---color-button-primary: #763b16;
---color-button-primary-hover: #45220d;
---color-button-text: #f8e5ce;
+  /* Buttons */
+  --color-button-primary: #5b8cff;
+  --color-button-primary-hover: #3b63c7;
+  --color-button-text: #f4f7ff;
 
-/* Cards */
---color-card-bg: #f7d196;
---color-card-border: #ca8e56;
+  /* Cards */
+  --color-card-bg: #11182a;
+  --color-card-border: #2b3754;
 
-/* Input */
---color-input-bg: #f8e5ce;
---color-input-border: #ca8e56;
---color-input-focus: #763b16;
+  /* Input */
+  --color-input-bg: #27292d;
+  --color-input-border: #33415f;
+  --color-input-focus: #8ab4ff;
 
-/* Shadows */
---shadow-primary: 0 4px 20px rgba(69, 34, 13, 0.15);
+  /* Shadows */
+  --shadow-primary: 0 4px 24px rgba(0, 0, 0, 0.45);
 }

@@ -11,4 +11,6 @@ export const deepseekModel = new ChatOpenAI({
     baseURL: "https://integrate.api.nvidia.com/v1",
   },
   temperature: 0.7,
+  maxRetries: 0,
+  timeout: 15000,
 });

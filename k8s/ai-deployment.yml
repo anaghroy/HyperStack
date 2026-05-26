@@ -18,6 +18,18 @@ spec:
         - image: ai-orchestration
           name: ai-server
           env:
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: JWT_SECRET
+
+            - name: AI_MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: AI_MONGO_URI
+
             - name: NVIDIA_API_KEY
               valueFrom:
                 secretKeyRef:

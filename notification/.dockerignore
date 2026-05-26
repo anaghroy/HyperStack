@@ -1,0 +1,25 @@
+# Dependencies (reinstalled inside Docker)
+node_modules
+
+# Build artifacts
+dist
+.next
+
+# Environment files (never bake secrets into the image)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dev/editor files
+**/.git
+**/.gitignore
+**/.DS_Store
+**/Thumbs.db
+**/*.log
+**/.vscode
+**/.idea
+
+# Docker files themselves
+Dockerfile
+.dockerignore
+docker-compose*.yml

@@ -44,6 +44,18 @@ spec:
                   name: app-secret
                   key: AUTH_MONGO_URI
 
+            - name: RABBITMQ_URI
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: RABBITMQ_URI
+
+            - name: RABBITMQ_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: RABBITMQ_PORT
+
             - name: GOOGLE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -55,11 +67,13 @@ spec:
                 secretKeyRef:
                   name: app-secret
                   key: GOOGLE_CLIENT_SECRET
+
             - name: GOOGLE_CALLBACK_URL
               valueFrom:
                 secretKeyRef:
                   name: app-secret
                   key: GOOGLE_CALLBACK_URL
+
             - name: GITHUB_CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -71,6 +85,7 @@ spec:
                 secretKeyRef:
                   name: app-secret
                   key: GITHUB_CLIENT_SECRET
+
             - name: GITHUB_CALLBACK_URL
               valueFrom:
                 secretKeyRef:
@@ -82,6 +97,7 @@ spec:
                 secretKeyRef:
                   name: app-secret
                   key: JWT_SECRET
+                  
             - name: FRONTEND_URL
               valueFrom:
                 secretKeyRef:

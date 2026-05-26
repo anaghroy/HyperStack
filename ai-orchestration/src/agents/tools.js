@@ -5,17 +5,14 @@ import * as z from "zod";
 
 export const listFiles = tool(
   async ({ }, config) => {
-    const writer = config.writer;
-    writer("Listing files in project directory...");
+    const writer = config.configurable.writer;
+    writer("data: " + JSON.stringify({ text: "Listing files in project directory...\n" }) + "\n\n");
 
     const response = await axios.get(
-      `http://sandbox-service-${config.context.projectId}:3000/list-files`,
+      `http://sandbox-service-${config.configurable.projectId}:3000/list-files`,
     );
     writer(
-      "Files listed successfully." +
-        "Files:" +
-        response.data.files.join(",") +
-        "\n",
+      "data: " + JSON.stringify({ text: "Files listed successfully.\nFiles: " + response.data.files.join(",") + "\n" }) + "\n\n"
     );
     return JSON.stringify(response.data.files);
   },
@@ -23,20 +20,22 @@ export const listFiles = tool(
     name: "list_files",
     description:
       "list all files in the project directory. This is useful for understanding what files are available t work with",
-    schema: z.object({}),
+    schema: z.object({
+      path: z.string().optional().describe("Optional path to list files for, defaults to root")
+    }),
   },
 );
 
 export const readFiles = tool(
   async ({ files = [] }, config) => {
-    const writer = config.writer;
-    writer("Reading files..." + files.join(",") + "\n");
+    const writer = config.configurable.writer;
+    writer("data: " + JSON.stringify({ text: `Reading files... ${files.join(",")}\n` }) + "\n\n");
 
     const response = await axios.post(
-      `http://sandbox-service-${config.context.projectId}:3000/read-files?files=` +
+      `http://sandbox-service-${config.configurable.projectId}:3000/read-files?files=` +
         files.join(","),
     );
-    writer("Files read successfully.\n");
+    writer("data: " + JSON.stringify({ text: "Files read successfully.\n" }) + "\n\n");
     return JSON.stringify(response.data);
   },
   {
@@ -55,19 +54,19 @@ export const readFiles = tool(
 
 export const updateFiles = tool(
   async ({ files }, config) => {
-    const writer = config.writer;
+    const writer = config.configurable.writer;
 
-    writer("Updating files..." + files.map((f) => f.file).join(",") + "\n");
+    writer("data: " + JSON.stringify({ text: `Updating files... ${files.map((f) => f.file).join(",")}\n` }) + "\n\n");
     const response = await axios.patch(
-      `http://sandbox-service-${config.context.projectId}:3000/update-files`,
+      `http://sandbox-service-${config.configurable.projectId}:3000/update-files`,
       { updates: files },
     );
 
-    writer("Files updated successfully.\n");
+    writer("data: " + JSON.stringify({ text: "Files updated successfully.\n" }) + "\n\n");
     return JSON.stringify(response.data.results);
   },
   {
-    name: "update_files",
+    name: "create_or_update_files",
     description:
       "Update the contents of specified files. This is useful for making changes to files based on the requirements of the task at hand. this tool can also use to create new files by providing a new file name in the file field and the content to be added in the content field.",
     schema: z.object({

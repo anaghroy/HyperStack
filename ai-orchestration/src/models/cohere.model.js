@@ -5,7 +5,7 @@ import { ChatCohere } from "@langchain/cohere";
  * URL: https://docs.cohere.com/docs/command-r-plus
  */
 export const cohereModel = new ChatCohere({
-  model: "command-r-plus",
+  model: "command-r-plus-08-2024",
   apiKey: process.env.COHERE_API_KEY,
   temperature: 0.7,
 });

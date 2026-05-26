@@ -1,0 +1,54 @@
+@use "../color/variables";
+
+.file-tree {
+  overflow-y: auto;
+  flex-grow: 1;
+  font-size: 13px;
+  font-family: var(--font-sans);
+
+  .file-node {
+    display: flex;
+    align-items: center;
+    padding: 4px 16px 4px 8px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    user-select: none;
+    transition: background-color 0.1s ease, color 0.1s ease;
+    white-space: nowrap;
+
+    &:hover {
+      background-color: var(--color-border);
+      color: var(--color-text-primary);
+    }
+
+    .file-node-icon {
+      display: flex;
+      align-items: center;
+      margin-right: 6px;
+
+      .chevron {
+        width: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 2px;
+      }
+
+      .spacer {
+        width: 16px;
+        margin-right: 2px;
+      }
+    }
+
+    .file-node-name {
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+  }
+
+  .tree-loading {
+    padding: 16px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+  }
+}

@@ -1,19 +1,19 @@
 import "dotenv/config";
 import { listFiles, readFiles, updateFiles } from "./tools.js";
-import { createAgent } from "langchain";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { getModel } from "../models/index.js";
 
 const tools = [listFiles, readFiles, updateFiles];
 
 const fallbackChain = [
-  "qwen",
-  "mistral",
-  "kimi",
+  "llama",
   "cohere",
   "deepseek",
+  "qwen",
+  "kimi",
+  "mistral",
   "minimax",
-  "step",
-  "llama"
+  "step"
 ];
 
 const invokeAgent = async (params) => {
@@ -29,8 +29,8 @@ const invokeAgent = async (params) => {
     try {
       console.log(`[AI Orchestrator] Attempting with model: ${name}`);
       const model = getModel(name);
-      const agent = createAgent({
-        model,
+      const agent = createReactAgent({
+        llm: model,
         tools,
       }).withConfig({ recursionLimit: 300 });
 
@@ -60,13 +60,13 @@ const streamAgent = async function* (inputs, config) {
     try {
       console.log(`[AI Orchestrator] Attempting stream with model: ${name}`);
       const model = getModel(name);
-      const agent = createAgent({
-        model,
+      const agent = createReactAgent({
+        llm: model,
         tools,
       }).withConfig({ recursionLimit: 300 });
 
-      // In LangGraph, .stream returns an async iterable
-      const stream = await agent.stream(inputs, config);
+      // Use streamEvents for real-time token yielding
+      const stream = await agent.streamEvents(inputs, { version: "v2", ...config });
       
       let hasYielded = false;
       for await (const chunk of stream) {

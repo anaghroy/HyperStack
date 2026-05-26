@@ -1,6 +1,14 @@
 import { K8sCoreV1Api } from "./config.js";
 
-export async function createPod(sandboxId) {
+export async function createPod(sandboxId, githubUrl = "") {
+  // Define init command for template copying
+  const templateInitCommand = `if [ -z "$(ls -A /seed 2>/dev/null)" ]; then cp -r /workspace/. /seed/; fi`;
+
+  // Define main container command
+  const mainCommand = githubUrl
+    ? `npm install && npm run dev -- --host 0.0.0.0 || tail -f /dev/null`
+    : `npm run dev -- --host 0.0.0.0`;
+
   // Define Pod Manifest
   const podManifest = {
     metadata: {
@@ -18,10 +26,22 @@ export async function createPod(sandboxId) {
       ],
       initContainers: [
         {
-          name: "init-container",
+          name: "git-clone",
+          image: "alpine/git",
+          imagePullPolicy: "IfNotPresent",
+          command: ["sh", "-c", githubUrl ? `git clone ${githubUrl} /tmp/repo 2> /seed/git-error.txt && cp -a /tmp/repo/. /seed/ || true` : "true"],
+          volumeMounts: [
+            {
+              name: "workspace-volume",
+              mountPath: "/seed",
+            },
+          ],
+        },
+        {
+          name: "init-template",
           image: "template",
           imagePullPolicy: "IfNotPresent",
-          command: ["sh", "-c", "cp -r /workspace/. /seed/"],
+          command: ["sh", "-c", templateInitCommand],
           volumeMounts: [
             {
               name: "workspace-volume",
@@ -35,10 +55,11 @@ export async function createPod(sandboxId) {
           image: "template",
           imagePullPolicy: "IfNotPresent",
           name: "sandbox-container",
+          command: ["sh", "-c", mainCommand],
           ports: [{ containerPort: 5173, name: "http" }],
           resources: {
             limits: { cpu: "500m", memory: "1Gi" },
-            requests: { cpu: "250m", memory: "500Mi" },
+            requests: { cpu: "50m", memory: "100Mi" },
           },
           volumeMounts: [
             {
@@ -54,7 +75,7 @@ export async function createPod(sandboxId) {
           ports: [{ containerPort: 3000, name: "http" }],
           resources: {
             limits: { cpu: "500m", memory: "1Gi" },
-            requests: { cpu: "250m", memory: "500Mi" },
+            requests: { cpu: "50m", memory: "100Mi" },
           },
           volumeMounts: [
             {

@@ -14,7 +14,11 @@ const app = express();
 const httpServer = http.createServer(app);
 app.use(morgan("dev"));
 
-app.use(cors({ origin: "*", methods: ["GET", "POST", "PATCH", "DELETE"] }));
+app.use(cors({ 
+  origin: ["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173"],
+  credentials: true,
+  methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"] 
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -190,6 +194,8 @@ app.patch("/update-files", async (req, res) => {
     }),
   );
 
+  io.emit("file-system-changed");
+
   res.status(200).json({
     message: "File update results",
     results,
@@ -228,6 +234,8 @@ app.post("/create-files", async (req, res) => {
       }
     }),
   );
+
+  io.emit("file-system-changed");
 
   res.status(200).json({
     message: "File creation results",

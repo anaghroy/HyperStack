@@ -23,8 +23,7 @@ function getProxy(sandboxId) {
   const target = `http://sandbox-service-${sandboxId}`;
   if (!proxies[sandboxId]) {
     proxies[sandboxId] = createProxyMiddleware({
-      target,
-      changeOrigin: true,
+      target
     });
   }
   return proxies[sandboxId];

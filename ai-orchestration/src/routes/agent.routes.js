@@ -1,6 +1,7 @@
 import { Router } from "express";
 import agent from "../agents/code.agent.js";
 import { SYSTEM_INSTRUCTION } from "../models/index.js";
+import { ChatHistory } from "../models/chat.model.js";
 
 const agentRouter = Router();
 
@@ -18,6 +19,19 @@ agentRouter.post("/invoke", async (req, res) => {
     });
 
     const writer = (text) => res.write(text);
+    
+    // Fetch existing chat history for this project
+    let chatDoc = await ChatHistory.findOne({ projectId });
+    if (!chatDoc) {
+      chatDoc = new ChatHistory({ projectId, messages: [] });
+    }
+
+    // Format messages for LangChain
+    const previousMessages = chatDoc.messages.map(m => ({
+      role: m.role,
+      content: m.content
+    }));
+
     const stream = await agent.stream(
       {
         messages: [
@@ -25,6 +39,7 @@ agentRouter.post("/invoke", async (req, res) => {
             role: "system",
             content: SYSTEM_INSTRUCTION,
           },
+          ...previousMessages,
           {
             role: "user",
             content: message,
@@ -32,7 +47,7 @@ agentRouter.post("/invoke", async (req, res) => {
         ],
       },
       {
-        context: {
+        configurable: {
           projectId,
           writer,
         },
@@ -40,26 +55,30 @@ agentRouter.post("/invoke", async (req, res) => {
       },
     );
 
-    let lastState = null;
-    for await (const state of stream) {
-      lastState = state;
-    }
+    let fullAiResponse = "";
 
-    if (lastState?.messages?.length) {
-      const msgs = lastState.messages;
-      for (let i = msgs.length - 1; i >= 0; i--) {
-        const m = msgs[i];
-        const role = m.role ?? m._getType?.();
-        if ((role === "ai" || role === "assistant") && !m.tool_calls?.length) {
-          const content =
-            typeof m.content === "string"
-              ? m.content
-              : JSON.stringify(m.content);
-          res.write(content + "\n");
-          break;
+    for await (const event of stream) {
+      if (event.event === "on_chat_model_stream" && event.data?.chunk?.content) {
+        let content = event.data.chunk.content;
+        if (typeof content === "string") {
+          fullAiResponse += content;
+          res.write(`data: ${JSON.stringify({ text: content })}\n\n`);
+        } else if (Array.isArray(content)) {
+          // In some models, stream chunks can be arrays of text parts
+          for (const part of content) {
+            if (part.type === "text" && part.text) {
+              fullAiResponse += part.text;
+              res.write(`data: ${JSON.stringify({ text: part.text })}\n\n`);
+            }
+          }
         }
       }
     }
+
+    // Save to DB
+    chatDoc.messages.push({ role: "user", content: message });
+    chatDoc.messages.push({ role: "ai", content: fullAiResponse });
+    await chatDoc.save();
 
     res.end();
   } catch (error) {

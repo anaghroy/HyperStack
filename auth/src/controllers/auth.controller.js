@@ -1,10 +1,12 @@
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
+import { sendAuthNotification } from "../config/mq.js";
 
 /**
  * Handles the Google OAuth callback.
  * Passport.js authenticates the request and attaches the profile to `req.user`.
  */
+
 export const googleCallback = async (req, res) => {
   try {
     if (!req.user) {
@@ -12,15 +14,24 @@ export const googleCallback = async (req, res) => {
     }
 
     const profile = req.user;
-    const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+
+    const email =
+      profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+
     const name = profile.displayName || profile.username || "Google User";
-    const avatar = profile.photos && profile.photos[0] ? profile.photos[0].value : null;
+
+    const avatar =
+      profile.photos && profile.photos[0] ? profile.photos[0].value : null;
 
     if (!email) {
-      return res.status(400).json({ message: "Email not provided by Google account" });
+      return res
+        .status(400)
+        .json({ message: "Email not provided by Google account" });
     }
 
-    // Find or create the user based on googleId
+    let isNewUser = false;
+
+    // Find or create user
     let user = await User.findOne({ googleId: profile.id });
 
     if (!user) {
@@ -28,45 +39,80 @@ export const googleCallback = async (req, res) => {
       user = await User.findOne({ email });
 
       if (user) {
-        // Link googleId to the existing user
-        user.googleId = profile.id;
+        user.googleId = profile.id; // Link googleId to the existing user
+
         if (!user.avatar && avatar) {
           user.avatar = avatar;
         }
+
         await user.save();
       } else {
-        // Create a new user
+        isNewUser = true;
+
         user = new User({
           googleId: profile.id,
           email,
           name,
           avatar,
         });
+
         await user.save();
       }
     }
 
+    /**
+     * Delegate emails to Notification Service via RabbitMQ
+     */
+    if (isNewUser) {
+      await sendAuthNotification({
+        type: "WELCOME_EMAIL",
+        userId: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        provider: "Google",
+        timestamp: new Date()
+      });
+    } else {
+      await sendAuthNotification({
+        type: "NEW_LOGIN",
+        userId: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        provider: "Google",
+        timestamp: new Date()
+      });
+    }
+
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email },
+      {
+        id: user._id,
+        email: user.email,
+      },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      {
+        expiresIn: "7d",
+      },
     );
 
-    // Set JWT in HTTP-only cookie
+    // Set cookie
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    // Redirect user back to the client application
-    const clientRedirectUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const clientRedirectUrl =
+      process.env.FRONTEND_URL || "http://localhost:5173";
+
     return res.redirect(clientRedirectUrl);
   } catch (error) {
     console.error("Error in googleCallback:", error);
-    return res.status(500).json({ message: "Internal server error during Google login" });
+
+    return res.status(500).json({
+      message: "Internal server error during Google login",
+    });
   }
 };
 
@@ -74,69 +120,130 @@ export const googleCallback = async (req, res) => {
  * Handles the GitHub OAuth callback.
  * Passport.js authenticates the request and attaches the profile to `req.user`.
  */
+
 export const githubCallback = async (req, res) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ message: "GitHub authentication failed" });
+      return res.status(401).json({
+        message: "GitHub authentication failed",
+      });
     }
 
     const profile = req.user;
-    const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
-    const name = profile.displayName || profile.username || "GitHub User";
-    const avatar = profile.photos && profile.photos[0] ? profile.photos[0].value : null;
 
-    // Fallback if the user has private/empty email on GitHub
-    const finalEmail = email || `${profile.username || profile.id}@github.com`;
+    const email =
+      profile.emails && profile.emails[0]
+        ? profile.emails[0].value
+        : null;
 
-    // Find or create the user based on githubId
-    let user = await User.findOne({ githubId: profile.id });
+    const name =
+      profile.displayName || profile.username || "GitHub User";
+
+    const avatar =
+      profile.photos && profile.photos[0]
+        ? profile.photos[0].value
+        : null;
+
+    // Fallback if GitHub email is private
+    const finalEmail =
+      email || `${profile.username || profile.id}@github.com`;
+
+       let isNewUser = false;
+
+    // Find existing GitHub user
+    let user = await User.findOne({
+      githubId: profile.id,
+    });
 
     if (!user) {
-      // Check if user already exists with the same email
-      user = await User.findOne({ email: finalEmail });
+      // Check if account already exists with same email
+      user = await User.findOne({
+        email: finalEmail,
+      });
 
       if (user) {
-        // Link githubId to the existing user
+        // Link GitHub account
         user.githubId = profile.id;
+
         if (!user.avatar && avatar) {
           user.avatar = avatar;
         }
+
         await user.save();
       } else {
-        // Create a new user
+        // Brand new user
+        isNewUser = true;
+
         user = new User({
           githubId: profile.id,
           email: finalEmail,
           name,
           avatar,
         });
+
         await user.save();
       }
     }
 
+    /**
+     * Delegate emails to Notification Service via RabbitMQ
+     */
+    if (isNewUser) {
+      await sendAuthNotification({
+        type: "WELCOME_EMAIL",
+        userId: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        provider: "GitHub",
+        timestamp: new Date()
+      });
+    } else {
+      await sendAuthNotification({
+        type: "NEW_LOGIN",
+        userId: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        provider: "GitHub",
+        timestamp: new Date()
+      });
+    }
+
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email },
+      {
+        id: user._id,
+        email: user.email,
+      },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      {
+        expiresIn: "7d",
+      },
     );
 
-    // Set JWT in HTTP-only cookie
+    // Set auth cookie
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    // Redirect user back to the client application
-    const clientRedirectUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    // Redirect to frontend
+    const clientRedirectUrl =
+      process.env.FRONTEND_URL || "http://localhost:5173";
+
     return res.redirect(clientRedirectUrl);
+
   } catch (error) {
     console.error("Error in githubCallback:", error);
-    return res.status(500).json({ message: "Internal server error during GitHub login" });
+
+    return res.status(500).json({
+      message: "Internal server error during GitHub login",
+    });
   }
 };
+
+
 
 /**
  * Logs out the user by clearing the JWT token cookie.
@@ -157,7 +264,9 @@ export const getCurrentUser = async (req, res) => {
   try {
     const token = req.cookies.token;
     if (!token) {
-      return res.status(401).json({ message: "Unauthorized: No token provided" });
+      return res
+        .status(401)
+        .json({ message: "Unauthorized: No token provided" });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -169,6 +278,8 @@ export const getCurrentUser = async (req, res) => {
     return res.status(200).json({ user });
   } catch (error) {
     console.error("Error in getCurrentUser:", error);
-    return res.status(401).json({ message: "Unauthorized: Invalid or expired token" });
+    return res
+      .status(401)
+      .json({ message: "Unauthorized: Invalid or expired token" });
   }
 };
