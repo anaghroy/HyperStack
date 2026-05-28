@@ -5,7 +5,8 @@ const userSchema = new mongoose.Schema({
     githubId: { type: String, unique: true, sparse: true },
     email: { type: String, required: true, unique: true },
     name: { type: String, required: true },
-    avatar: { type: String }
+    avatar: { type: String },
+    webhookUrl: { type: String, default: "" }
 }, { timestamps: true });
 
 const User = mongoose.model('user', userSchema);

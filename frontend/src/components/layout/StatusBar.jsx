@@ -1,9 +1,9 @@
 import React from 'react';
 import { GitBranch, XCircle, AlertTriangle, CheckCircle2, Radio } from 'lucide-react';
-import { useProject } from '../../context/ProjectContext';
+import { useSelector } from 'react-redux';
 
 const StatusBar = () => {
-  const { sandboxId } = useProject();
+  const { sandboxId } = useSelector((state) => state.project);
 
   const handleGoLive = () => {
     if (sandboxId) {

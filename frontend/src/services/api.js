@@ -1,4 +1,4 @@
-const API_BASE = ''; // Use empty string to leverage Vite proxy for /api
+export const API_BASE = ''; // Use empty string to leverage Vite proxy for /api
 
 let currentSandboxId = null;
 
@@ -62,6 +62,22 @@ export const listProjects = async () => {
     return await res.json();
   } catch (error) {
     console.error('Failed to list projects:', error);
+    throw error;
+  }
+};
+
+export const sendHeartbeat = async (sandboxId) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/sandbox/heartbeat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ sandboxId })
+    });
+    if (!res.ok) throw new Error("Failed to send heartbeat");
+    return await res.json();
+  } catch (error) {
+    console.error('Failed to send heartbeat:', error);
     throw error;
   }
 };
@@ -145,6 +161,32 @@ export const updateFile = async (filename, content) => {
   }
 };
 
+export const createFiles = async (files) => {
+  try {
+    return await agentFetch('/create-files', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        files: files // e.g. [{ file: "path/to/file", content: "..." }]
+      })
+    });
+  } catch (error) {
+    console.error('Failed to create files:', error);
+    throw error;
+  }
+};
+
+export const deleteItem = async (filename) => {
+  try {
+    return await agentFetch(`/delete-item?path=${encodeURIComponent(filename)}`, {
+      method: 'DELETE'
+    });
+  } catch (error) {
+    console.error('Failed to delete item:', error);
+    throw error;
+  }
+};
+
 export const invokeAI = async (message, projectId) => {
   try {
     const res = await fetch(`${API_BASE}/api/ai/invoke`, {
@@ -174,6 +216,22 @@ export const getCurrentUser = async () => {
   }
 };
 
+export const updateWebhook = async (webhookUrl) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/webhook`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ webhookUrl }),
+    });
+    if (!res.ok) throw new Error("Failed to update webhook");
+    return await res.json();
+  } catch (error) {
+    console.error('Failed to update webhook:', error);
+    throw error;
+  }
+};
+
 export const logoutUser = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/auth/logout`, {
@@ -184,6 +242,38 @@ export const logoutUser = async () => {
     return await res.json();
   } catch (error) {
     console.error('Failed to logout:', error);
+    throw error;
+  }
+};
+
+export const invokeAutocomplete = async (prefix, suffix) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/ai/autocomplete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ prefix, suffix })
+    });
+    if (!res.ok) throw new Error("Failed to autocomplete");
+    return await res.json();
+  } catch (error) {
+    console.error('Autocomplete failed:', error);
+    throw error;
+  }
+};
+
+export const getArchitectureGraph = async (files) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/ai/architecture`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ files })
+    });
+    if (!res.ok) throw new Error("Failed to fetch architecture graph");
+    return await res.json();
+  } catch (error) {
+    console.error('Failed to get architecture graph:', error);
     throw error;
   }
 };

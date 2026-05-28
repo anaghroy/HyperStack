@@ -4,11 +4,14 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { io } from 'socket.io-client';
 import '@xterm/xterm/css/xterm.css';
-import { X, Maximize2, Minimize2 } from 'lucide-react';
+import { X, Maximize2, Minimize2, Sparkles } from 'lucide-react';
 import { getSandboxId } from '../../services/api';
+import { useDispatch } from 'react-redux';
+import { setIsAIChatOpen, setAiInitialMessage } from '../../redux/slices/projectSlice';
 
-const TerminalPanel = () => {
+const TerminalPanel = ({ onAnalyze }) => {
   const terminalRef = useRef(null);
+  const bufferRef = useRef("");
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -50,6 +53,11 @@ const TerminalPanel = () => {
 
       socket.on('terminal-output', (data) => {
         term.write(data);
+        // Maintain a rolling buffer of ~2000 chars for context
+        bufferRef.current += data;
+        if (bufferRef.current.length > 3000) {
+          bufferRef.current = bufferRef.current.slice(-2000);
+        }
       });
 
       term.onData((data) => {
@@ -71,10 +79,36 @@ const TerminalPanel = () => {
     }
   }, []);
 
-  return <div ref={terminalRef} className="xterm-container" style={{ height: '100%', width: '100%', padding: '8px' }} />;
+  return (
+    <div style={{ height: '100%', width: '100%', position: 'relative' }}>
+      <button 
+        className="ai-analyze-btn" 
+        onClick={() => onAnalyze(bufferRef.current)}
+        title="Analyze terminal output with AI"
+        style={{
+          position: 'absolute', right: '16px', top: '8px', zIndex: 10,
+          background: 'rgba(30, 31, 32, 0.84)', border: '1px solid rgb(199, 202, 206)',
+          color: '#e6edf7', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '500'
+        }}
+      >
+        <Sparkles size={12} color="#3b82f6" />
+        Analyze
+      </button>
+      <div ref={terminalRef} className="xterm-container" style={{ height: '100%', width: '100%', padding: '8px', paddingTop: '32px' }} />
+    </div>
+  );
 };
 
 const BottomPanel = ({ activePanel, setActivePanel, isFullscreen, toggleFullscreen, onClose }) => {
+  const dispatch = useDispatch();
+
+  const handleAnalyzeTerminal = (buffer) => {
+    // strip basic ANSI escape codes if possible, or just send raw
+    const cleanBuffer = buffer.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+    dispatch(setIsAIChatOpen(true));
+    dispatch(setAiInitialMessage(`I ran a command in my terminal and got this output. Please analyze it and tell me how to fix any errors:\n\`\`\`\n${cleanBuffer}\n\`\`\``));
+  };
   return (
     <div className="bottom-panel" style={{ height: '100%' }}>
       <div className="panel-header">
@@ -109,7 +143,7 @@ const BottomPanel = ({ activePanel, setActivePanel, isFullscreen, toggleFullscre
       </div>
       
       <div className="panel-content">
-        {activePanel === 'terminal' && <TerminalPanel />}
+        {activePanel === 'terminal' && <TerminalPanel onAnalyze={handleAnalyzeTerminal} />}
         {activePanel === 'output' && <div className="panel-placeholder">Output will appear here...</div>}
         {activePanel === 'services' && <div className="panel-placeholder">Service Monitor...</div>}
       </div>

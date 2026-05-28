@@ -2,9 +2,10 @@ import express from "express";
 import { createPod } from "../kubernetes/pod.js";
 import { createService } from "../kubernetes/service.js";
 import { v7 as uuid } from "uuid";
-import { createSandboxKey } from "../config/redis.js";
+import { createSandboxKey, refreshSandboxKey } from "../config/redis.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import Project from "../models/project.model.js";
+import { sendNotification } from "../config/mq.js";
 
 const router = express.Router();
 
@@ -55,6 +56,13 @@ router.post("/start", authMiddleware, async (req, res) => {
       createSandboxKey(sandboxId), // Create sandbox key in Redis
     ]);
 
+    // Dispatch real-time notification
+    await sendNotification({
+        type: "APP_NOTIFICATION",
+        userId: req.user.id,
+        message: `Your sandbox environment '${project.title}' is ready!`
+    });
+
     return res.status(201).json({
       message: "Sandbox environment created successfully",
       sandboxId,
@@ -64,6 +72,27 @@ router.post("/start", authMiddleware, async (req, res) => {
     console.error("Error while creating sandbox:", error);
     return res.status(500).json({
       message: "Failed to create sandbox",
+      error: error.message,
+    });
+  }
+});
+
+router.post("/heartbeat", authMiddleware, async (req, res) => {
+  try {
+    const { sandboxId } = req.body;
+    if (!sandboxId) {
+      return res.status(400).json({ message: "sandboxId is required" });
+    }
+    
+    await refreshSandboxKey(sandboxId);
+    
+    return res.status(200).json({
+      message: "Sandbox heartbeat successful",
+    });
+  } catch (error) {
+    console.error("Error processing heartbeat:", error);
+    return res.status(500).json({
+      message: "Failed to process heartbeat",
       error: error.message,
     });
   }

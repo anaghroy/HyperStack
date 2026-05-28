@@ -1,23 +1,24 @@
-import React, { useState } from 'react';
-import { Files, Search, GitBranch, Settings, LayoutGrid } from 'lucide-react';
+import React from 'react';
+import { Files, Search, GitBranch, Settings, LayoutGrid, Network } from 'lucide-react';
 
-const Sidebar = ({ children }) => {
-  const [activeTab, setActiveTab] = useState('explorer');
-
+const Sidebar = ({ children, activeTab, setActiveTab }) => {
   return (
     <div className="sidebar-container">
       <div className="activity-bar">
         <div className="activity-top">
-          <div className={`activity-icon ${activeTab === 'explorer' ? 'active' : ''}`} onClick={() => setActiveTab('explorer')}>
+          <div className={`activity-icon ${activeTab === 'explorer' ? 'active' : ''}`} onClick={() => setActiveTab('explorer')} title="Explorer">
             <Files size={24} strokeWidth={1.5} />
           </div>
-          <div className={`activity-icon ${activeTab === 'search' ? 'active' : ''}`} onClick={() => setActiveTab('search')}>
+          <div className={`activity-icon ${activeTab === 'search' ? 'active' : ''}`} onClick={() => setActiveTab('search')} title="Search">
             <Search size={24} strokeWidth={1.5} />
           </div>
-          <div className={`activity-icon ${activeTab === 'source' ? 'active' : ''}`} onClick={() => setActiveTab('source')}>
+          <div className={`activity-icon ${activeTab === 'source' ? 'active' : ''}`} onClick={() => setActiveTab('source')} title="Source Control">
             <GitBranch size={24} strokeWidth={1.5} />
           </div>
-          <div className={`activity-icon ${activeTab === 'services' ? 'active' : ''}`} onClick={() => setActiveTab('services')}>
+          <div className={`activity-icon ${activeTab === 'graph' ? 'active' : ''}`} onClick={() => setActiveTab('graph')} title="Architecture Graph">
+            <Network size={24} strokeWidth={1.5} />
+          </div>
+          <div className={`activity-icon ${activeTab === 'services' ? 'active' : ''}`} onClick={() => setActiveTab('services')} title="Services">
             <LayoutGrid size={24} strokeWidth={1.5} />
           </div>
         </div>

@@ -82,7 +82,7 @@ body {
 
 :root {
   /* Primary Brand */
-  --color-primary: #0078D4;
+  --color-primary: #e4e8eb;
   --color-primary-dark: #5b8cff;
   --color-primary-darker: #131111;
   /* Background / Surface */
@@ -361,7 +361,7 @@ body {
 .file-tree {
   overflow-y: auto;
   flex-grow: 1;
-  font-size: 13px;
+  font-size: 15px;
   font-family: var(--font-sans);
 }
 .file-tree .file-node {
@@ -969,9 +969,16 @@ body {
   justify-content: center;
   transition: all 0.2s;
 }
+.dashboard-wrapper .dashboard-body .sidebar .sidebar-bottom .logout-btn svg {
+  transition: color 0.2s;
+}
 .dashboard-wrapper .dashboard-body .sidebar .sidebar-bottom .logout-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(239, 68, 68, 0.05);
+  border-color: rgba(239, 68, 68, 0.5);
   color: #fff;
+}
+.dashboard-wrapper .dashboard-body .sidebar .sidebar-bottom .logout-btn:hover svg {
+  color: #ef4444;
 }
 .dashboard-wrapper .dashboard-body .dashboard-content {
   flex: 1;
@@ -979,6 +986,40 @@ body {
   padding: 40px 60px;
   background-color: #080808;
   position: relative;
+}
+.dashboard-wrapper .dashboard-body .dashboard-content .secondary-btn, .dashboard-wrapper .dashboard-body .dashboard-content .primary-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  outline: none;
+}
+.dashboard-wrapper .dashboard-body .dashboard-content .secondary-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+.dashboard-wrapper .dashboard-body .dashboard-content .secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.dashboard-wrapper .dashboard-body .dashboard-content .primary-btn {
+  background: #fff;
+  border: 1px solid #fff;
+  color: #000;
+}
+.dashboard-wrapper .dashboard-body .dashboard-content .primary-btn:hover:not(:disabled) {
+  background: #f0f0f0;
+  border-color: #f0f0f0;
+}
+.dashboard-wrapper .dashboard-body .dashboard-content .primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 .dashboard-wrapper .dashboard-body .dashboard-content .content-header {
   display: flex;
@@ -1000,33 +1041,6 @@ body {
 .dashboard-wrapper .dashboard-body .dashboard-content .content-header .header-actions {
   display: flex;
   gap: 12px;
-}
-.dashboard-wrapper .dashboard-body .dashboard-content .content-header .header-actions .secondary-btn, .dashboard-wrapper .dashboard-body .dashboard-content .content-header .header-actions .primary-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-radius: 6px;
-  font-weight: 500;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.dashboard-wrapper .dashboard-body .dashboard-content .content-header .header-actions .secondary-btn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #fff;
-}
-.dashboard-wrapper .dashboard-body .dashboard-content .content-header .header-actions .secondary-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-.dashboard-wrapper .dashboard-body .dashboard-content .content-header .header-actions .primary-btn {
-  background: #fff;
-  border: 1px solid #fff;
-  color: #000;
-}
-.dashboard-wrapper .dashboard-body .dashboard-content .content-header .header-actions .primary-btn:hover {
-  background: #f0f0f0;
 }
 .dashboard-wrapper .dashboard-body .dashboard-content .create-project-card {
   background: rgba(17, 17, 17, 0.8);
@@ -1375,4 +1389,132 @@ body {
   to {
     opacity: 1;
   }
+}
+.architecture-graph-container {
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+  position: relative;
+}
+.architecture-graph-container .react-flow__bg {
+  background-color: #0a0a0a;
+}
+.architecture-graph-container .stats-panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  gap: 16px;
+  background-color: #111;
+  border: 1px solid #333;
+  padding: 12px 24px;
+  border-radius: 8px;
+  color: white;
+  z-index: 5;
+  font-family: var(--font-sans);
+}
+.architecture-graph-container .stats-panel .stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.architecture-graph-container .stats-panel .stat-item .stat-label {
+  font-size: 10px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.architecture-graph-container .stats-panel .stat-item .stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+.architecture-graph-container .custom-node {
+  display: flex;
+  align-items: center;
+  background-color: #000;
+  border: 1px solid #333;
+  border-radius: 24px;
+  padding: 6px 16px 6px 6px;
+  min-width: 160px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  color: white;
+  font-family: var(--font-sans);
+}
+.architecture-graph-container .custom-node .icon-container {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  background-color: #1a1a1a;
+}
+.architecture-graph-container .custom-node .icon-container svg {
+  width: 16px;
+  height: 16px;
+}
+.architecture-graph-container .custom-node .icon-container.folder {
+  color: #4a90e2;
+  background-color: rgba(74, 144, 226, 0.1);
+}
+.architecture-graph-container .custom-node .icon-container.file {
+  color: #a0a0a0;
+  background-color: rgba(160, 160, 160, 0.1);
+}
+.architecture-graph-container .custom-node .icon-container.database {
+  color: #50e3c2;
+  background-color: rgba(80, 227, 194, 0.1);
+}
+.architecture-graph-container .custom-node .icon-container.api {
+  color: #e91e63;
+  background-color: rgba(233, 30, 99, 0.1);
+}
+.architecture-graph-container .custom-node .icon-container.service {
+  color: #9c27b0;
+  background-color: rgba(156, 39, 176, 0.1);
+}
+.architecture-graph-container .custom-node .icon-container.component {
+  color: #ff9800;
+  background-color: rgba(255, 152, 0, 0.1);
+}
+.architecture-graph-container .custom-node .icon-container.default {
+  color: #f5f50a;
+  background-color: #222;
+}
+.architecture-graph-container .custom-node .node-content {
+  display: flex;
+  flex-direction: column;
+}
+.architecture-graph-container .custom-node .node-content .node-label {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.architecture-graph-container .custom-node .node-content .node-sublabel {
+  font-size: 9px;
+  color: #777;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.architecture-graph-container .custom-node .react-flow__handle {
+  width: 6px;
+  height: 6px;
+  background: #4a90e2;
+  border: none;
+}
+.architecture-graph-container .custom-node .react-flow__handle.react-flow__handle-left {
+  left: -3px;
+}
+.architecture-graph-container .custom-node .react-flow__handle.react-flow__handle-right {
+  right: -3px;
+}
+.architecture-graph-container .custom-node .react-flow__handle.react-flow__handle-top {
+  top: -3px;
+}
+.architecture-graph-container .custom-node .react-flow__handle.react-flow__handle-bottom {
+  bottom: -3px;
 }/*# sourceMappingURL=main.css.map */

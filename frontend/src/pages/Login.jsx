@@ -1,6 +1,6 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useSelector } from "react-redux";
 
 const GoogleIcon = () => (
   <svg
@@ -45,7 +45,7 @@ const GitHubIcon = () => (
 );
 
 const Login = () => {
-  const { user, loading } = useAuth();
+  const { user, loading } = useSelector((state) => state.auth);
 
   if (loading) {
     return (

@@ -15,7 +15,7 @@ const httpServer = http.createServer(app);
 app.use(morgan("dev"));
 
 app.use(cors({ 
-  origin: ["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173"],
+  origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
   credentials: true,
   methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"] 
 }));
@@ -241,6 +241,26 @@ app.post("/create-files", async (req, res) => {
     message: "File creation results",
     results,
   });
+});
+
+/**
+ * @route DELETE /delete-item
+ * @description Deletes a file or directory.
+ */
+app.delete("/delete-item", async (req, res) => {
+  const itemPath = req.query.path;
+  if (!itemPath) {
+    return res.status(400).json({ message: "No path specified", status: "error" });
+  }
+
+  try {
+    const fullPath = path.join(WORKING_DIR, itemPath);
+    await fs.promises.rm(fullPath, { recursive: true, force: true });
+    io.emit("file-system-changed");
+    res.status(200).json({ message: "Item deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: `Error deleting item: ${err.message}`, status: "error" });
+  }
 });
 
 export default httpServer;

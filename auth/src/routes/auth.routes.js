@@ -5,6 +5,7 @@ import {
   githubCallback,
   logout,
   getCurrentUser,
+  updateWebhook,
 } from "../controllers/auth.controller.js";
 
 const router = Router();
@@ -55,5 +56,8 @@ router.post("/logout", logout);
 
 // Get current authenticated user details
 router.get("/me", getCurrentUser);
+
+// Update user webhook
+router.put("/webhook", updateWebhook);
 
 export default router;

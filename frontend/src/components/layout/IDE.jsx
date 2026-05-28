@@ -6,22 +6,25 @@ import BottomPanel from '../panels/BottomPanel';
 import EditorPane from '../editor/EditorPane';
 import FileTree from '../explorer/FileTree';
 import AIChatPanel from '../panels/AIChatPanel';
-import { startSandbox, createProject } from '../../services/api';
+import ArchitectureGraph from '../graph/ArchitectureGraph';
+import { startSandbox, createProject, sendHeartbeat } from '../../services/api';
 
 import { useNavigate } from 'react-router-dom';
-import { useProject } from '../../context/ProjectContext';
+import { useSelector, useDispatch } from 'react-redux';
+import { setIsAIChatOpen } from '../../redux/slices/projectSlice';
 
 const IDE = () => {
-  const { activeProject, sandboxId } = useProject();
+  const { activeProject, sandboxId, isAIChatOpen } = useSelector((state) => state.project);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  const [activeTab, setActiveTab] = useState('explorer');
   const [activePanel, setActivePanel] = useState('terminal');
   const [panelHeight, setPanelHeight] = useState(300);
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [isPanelFullscreen, setIsPanelFullscreen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(250);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [aiChatWidth, setAiChatWidth] = useState(350);
 
   const containerRef = useRef(null);
@@ -31,6 +34,21 @@ const IDE = () => {
       navigate('/');
     }
   }, [activeProject, sandboxId, navigate]);
+
+  // Heartbeat mechanism to prevent sandbox from hibernating while active
+  useEffect(() => {
+    if (!sandboxId) return;
+
+    // Send heartbeat immediately on load
+    sendHeartbeat(sandboxId).catch(err => console.error("Heartbeat failed", err));
+
+    // Send heartbeat every 5 minutes (300000 ms)
+    const interval = setInterval(() => {
+      sendHeartbeat(sandboxId).catch(err => console.error("Heartbeat failed", err));
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [sandboxId]);
 
   // Global Keyboard Shortcut for Terminal
   useEffect(() => {
@@ -90,16 +108,31 @@ const IDE = () => {
 
   return (
     <div className="ide-container" ref={containerRef}>
-      <TopBar toggleAIChat={() => setIsAIChatOpen(!isAIChatOpen)} />
+      <TopBar toggleAIChat={() => dispatch(setIsAIChatOpen(!isAIChatOpen))} />
       
       <div className="ide-main">
-        <Sidebar>
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab}>
           <div className="sidebar-pane" style={{ width: sidebarWidth }}>
-            <div className="pane-header">EXPLORER</div>
-            {sandboxId ? (
-              <FileTree onSelectFile={setSelectedFile} />
-            ) : (
-              <div style={{ padding: '16px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>Initializing Workspace...</div>
+            {activeTab === 'explorer' && (
+              <>
+                <div className="pane-header">EXPLORER</div>
+                {sandboxId ? (
+                  <FileTree onSelectFile={setSelectedFile} />
+                ) : (
+                  <div style={{ padding: '16px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>Initializing Workspace...</div>
+                )}
+              </>
+            )}
+            {activeTab === 'graph' && (
+              <>
+                <div className="pane-header">ARCHITECTURE GRAPH</div>
+                <div style={{ padding: '16px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                  The Architecture Graph is open in the main view.
+                </div>
+              </>
+            )}
+            {activeTab !== 'explorer' && activeTab !== 'graph' && (
+              <div className="pane-header">{activeTab.toUpperCase()}</div>
             )}
           </div>
           <div className="resizer-vertical" onMouseDown={startSidebarResize} />
@@ -107,7 +140,11 @@ const IDE = () => {
         
         <div className="ide-editor-area">
           <div className="editor-wrapper" style={{ display: isPanelFullscreen ? 'none' : 'flex', flexGrow: 1, minHeight: 0, flexDirection: 'column' }}>
-            <EditorPane selectedFile={selectedFile} />
+            {activeTab === 'graph' ? (
+              <ArchitectureGraph />
+            ) : (
+              <EditorPane selectedFile={selectedFile} />
+            )}
           </div>
           
           {isPanelOpen && (
@@ -127,7 +164,7 @@ const IDE = () => {
         {isAIChatOpen && (
           <AIChatPanel 
             width={aiChatWidth} 
-            onClose={() => setIsAIChatOpen(false)} 
+            onClose={() => dispatch(setIsAIChatOpen(false))} 
           />
         )}
       </div>

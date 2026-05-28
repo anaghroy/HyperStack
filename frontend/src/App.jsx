@@ -1,18 +1,20 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import { ProjectProvider } from "./context/ProjectContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import IDE from "./components/layout/IDE";
 import Login from "./pages/Login";
+import Settings from "./pages/Settings";
+import { Toaster } from "react-hot-toast";
+import SocketListener from "./components/SocketListener";
 import "./styles/main.scss";
 
 const App = () => {
   return (
-    <AuthProvider>
-      <ProjectProvider>
-        <BrowserRouter>
+    <>
+      <SocketListener />
+      <Toaster position="top-right" />
+      <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route 
@@ -20,6 +22,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <Settings />
                 </ProtectedRoute>
               } 
             />
@@ -33,8 +43,7 @@ const App = () => {
             />
           </Routes>
         </BrowserRouter>
-      </ProjectProvider>
-    </AuthProvider>
+    </>
   );
 };
 

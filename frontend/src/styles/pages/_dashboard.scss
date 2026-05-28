@@ -210,6 +210,46 @@
       background-color: #080808;
       position: relative;
 
+      .secondary-btn, .primary-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        outline: none;
+      }
+
+      .secondary-btn {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #fff;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.05);
+        }
+      }
+
+      .primary-btn {
+        background: #fff;
+        border: 1px solid #fff;
+        color: #000;
+
+        &:hover:not(:disabled) {
+          background: #f0f0f0;
+          border-color: #f0f0f0;
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+
       .content-header {
         display: flex;
         justify-content: space-between;
@@ -234,38 +274,6 @@
         .header-actions {
           display: flex;
           gap: 12px;
-
-          .secondary-btn, .primary-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 16px;
-            border-radius: 6px;
-            font-weight: 500;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-          }
-
-          .secondary-btn {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #fff;
-
-            &:hover {
-              background: rgba(255, 255, 255, 0.05);
-            }
-          }
-
-          .primary-btn {
-            background: #fff;
-            border: 1px solid #fff;
-            color: #000;
-
-            &:hover {
-              background: #f0f0f0;
-            }
-          }
         }
       }
       

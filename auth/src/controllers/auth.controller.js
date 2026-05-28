@@ -72,15 +72,6 @@ export const googleCallback = async (req, res) => {
         provider: "Google",
         timestamp: new Date()
       });
-    } else {
-      await sendAuthNotification({
-        type: "NEW_LOGIN",
-        userId: user._id.toString(),
-        email: user.email,
-        name: user.name,
-        provider: "Google",
-        timestamp: new Date()
-      });
     }
 
     // Generate JWT token
@@ -197,15 +188,6 @@ export const githubCallback = async (req, res) => {
         provider: "GitHub",
         timestamp: new Date()
       });
-    } else {
-      await sendAuthNotification({
-        type: "NEW_LOGIN",
-        userId: user._id.toString(),
-        email: user.email,
-        name: user.name,
-        provider: "GitHub",
-        timestamp: new Date()
-      });
     }
 
     // Generate JWT token
@@ -281,5 +263,39 @@ export const getCurrentUser = async (req, res) => {
     return res
       .status(401)
       .json({ message: "Unauthorized: Invalid or expired token" });
+  }
+};
+
+/**
+ * Updates the current authenticated user's webhook URL.
+ */
+export const updateWebhook = async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized: No token provided" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { webhookUrl } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      decoded.id,
+      { webhookUrl },
+      { new: true }
+    ).select("-__v");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({ message: "Webhook URL updated successfully", user });
+  } catch (error) {
+    console.error("Error in updateWebhook:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error" });
   }
 };

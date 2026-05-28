@@ -44,6 +44,12 @@ spec:
                 secretKeyRef:
                   name: app-secret
                   key: REDIS_URL
+            
+            - name: RABBITMQ_URI
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: RABBITMQ_URI
 
             - name: JWT_SECRET
               valueFrom:

@@ -16,6 +16,11 @@ export async function createSandboxKey(sandboxId) {
   ); // Set key to expire in 1200 seconds (20 minutes)
 }
 
+export async function refreshSandboxKey(sandboxId) {
+  // Reset the expiration timer back to 20 minutes
+  await redis.expire(`sandbox:${sandboxId}`, 1200);
+}
+
 subscriber.config("SET", "notify-keyspace-events", "Ex", (err, res) => {
   if (err) {
     console.error("Error setting Redis config:", err);

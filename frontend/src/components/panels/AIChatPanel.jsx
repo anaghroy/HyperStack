@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Sparkles } from 'lucide-react';
 import { invokeAI, getSandboxId } from '../../services/api';
+import { useSelector, useDispatch } from 'react-redux';
+import { setAiInitialMessage } from '../../redux/slices/projectSlice';
 
 const AIChatPanel = ({ onClose, width }) => {
   const [messages, setMessages] = useState([
@@ -9,6 +11,9 @@ const AIChatPanel = ({ onClose, width }) => {
   const [inputValue, setInputValue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const chatEndRef = useRef(null);
+  
+  const dispatch = useDispatch();
+  const { aiInitialMessage } = useSelector((state) => state.project);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -18,19 +23,19 @@ const AIChatPanel = ({ onClose, width }) => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || isGenerating) return;
+  const handleSend = async (overrideMessage = null) => {
+    const messageToSend = overrideMessage || inputValue;
+    if (!messageToSend.trim() || isGenerating) return;
 
-    const userMessage = inputValue;
     setInputValue('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }, { role: 'ai', content: '' }]);
+    setMessages(prev => [...prev, { role: 'user', content: messageToSend }, { role: 'ai', content: '' }]);
     setIsGenerating(true);
 
     try {
       const projectId = getSandboxId();
       if (!projectId) throw new Error("Sandbox not running");
       
-      const res = await invokeAI(userMessage, projectId);
+      const res = await invokeAI(messageToSend, projectId);
       
       if (!res.body) throw new Error("No response body");
 
@@ -98,12 +103,20 @@ const AIChatPanel = ({ onClose, width }) => {
     }
   };
 
+  useEffect(() => {
+    if (aiInitialMessage) {
+      const msg = aiInitialMessage;
+      dispatch(setAiInitialMessage(null)); // Clear it immediately
+      handleSend(msg);
+    }
+  }, [aiInitialMessage]);
+
   return (
     <div className="ai-chat-panel" style={{ width: `${width}px` }}>
       <div className="chat-header">
         <div className="header-title">
           <Sparkles size={16} color="var(--color-primary)" />
-          Antigravity AI
+          HyperStack AI
         </div>
         <X size={16} className="close-icon" onClick={onClose} />
       </div>

@@ -48,6 +48,15 @@ spec:
                 name: auth-service
                 port:
                   number: 80
+    - http:
+        paths:
+          - pathType: Prefix
+            path: "/api/notification"
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 4000
 
     - host: "*.preview.localhost"
       http:

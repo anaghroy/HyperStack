@@ -55,6 +55,12 @@ spec:
                   name: app-secret
                   key: RABBITMQ_URI
 
+            - name: AUTH_MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: AUTH_MONGO_URI
+
           ports:
             - containerPort: 4000
               name: notifi-http

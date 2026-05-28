@@ -1,15 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useProject } from '../context/ProjectContext';
+import { useSelector, useDispatch } from 'react-redux';
+import { logoutUser } from '../redux/slices/authSlice';
+import { setActiveProject, setSandboxId } from '../redux/slices/projectSlice';
 import { listProjects, createProject, startSandbox, deleteProject, updateProject } from '../services/api';
 import { Plus, Folder, Loader2, Search, LogOut, Trash2, LayoutDashboard, Users, Settings, Rocket, Link as LinkIcon, Edit2, ExternalLink, X } from 'lucide-react';
 import { useDebounce } from '../hooks/useDebounce';
-import logo from '../assets/images/logo.png';
+import Header from '../components/Header';
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
-  const { setActiveProject, setSandboxId } = useProject();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+  
+  const logout = () => {
+    dispatch(logoutUser());
+  };
   const navigate = useNavigate();
 
   const [projects, setProjects] = useState([]);
@@ -84,8 +89,8 @@ const Dashboard = () => {
       const data = await startSandbox(project._id);
       
       if (data && data.sandboxId) {
-        setActiveProject(project);
-        setSandboxId(data.sandboxId);
+        dispatch(setActiveProject(project));
+        dispatch(setSandboxId(data.sandboxId));
         navigate('/ide');
       }
     } catch (error) {
@@ -159,42 +164,11 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-wrapper">
-      <header className="topbar">
-        <div className="logo-section">
-          <img src={logo} alt="HyperStack" className="logo-icon" />
-          <h2>HyperStack</h2>
-        </div>
-        
-        <div className="search-bar">
-          <Search size={18} />
-          <input 
-            type="text" 
-            placeholder="Search projects or debug queries..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        <div className="user-section">
-          <div className="user-profile">
-            <div className="avatar-container">
-              {user?.avatar ? (
-                <img src={user.avatar} alt="Profile" className="avatar" />
-              ) : (
-                <div className="avatar-placeholder">
-                  {user?.avatarUrl ? (
-                     <img src={user.avatarUrl} alt="avatar" />
-                  ) : (
-                     <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'User'}`} alt="avatar" style={{width: '100%', height: '100%', borderRadius: '50%'}}/>
-                  )}
-                </div>
-              )}
-              <div className="status-dot online"></div>
-            </div>
-            <span className="user-name">{user?.name || 'Developer'}</span>
-          </div>
-        </div>
-      </header>
+      <Header 
+        searchQuery={searchQuery} 
+        setSearchQuery={setSearchQuery} 
+        showSearch={true} 
+      />
 
       <div className="dashboard-body">
         <aside className="sidebar">
@@ -211,7 +185,7 @@ const Dashboard = () => {
             <Users size={18} />
             <span>Shared Projects</span>
           </div>
-          <div className="nav-item">
+          <div className="nav-item" onClick={() => navigate('/settings')}>
             <Settings size={18} />
             <span>Settings</span>
           </div>
