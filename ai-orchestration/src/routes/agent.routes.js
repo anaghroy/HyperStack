@@ -1,8 +1,10 @@
 import { Router } from "express";
-import agent from "../agents/code.agent.js";
+import { invokeMultiAgent, multiAgentGraph } from "../agents/multiAgentWorkflow.js";
 import { SYSTEM_INSTRUCTION, llamaModel } from "../models/index.js";
 import { ChatHistory } from "../models/chat.model.js";
 import { z } from "zod";
+import { embedCodebase } from "../services/vectorStore.js";
+import { runAutoFixer } from "../agents/autoFixer.agent.js";
 
 const agentRouter = Router();
 
@@ -33,48 +35,17 @@ agentRouter.post("/invoke", async (req, res) => {
       content: m.content
     }));
 
-    const stream = await agent.stream(
-      {
-        messages: [
-          {
-            role: "system",
-            content: SYSTEM_INSTRUCTION,
-          },
-          ...previousMessages,
-          {
-            role: "user",
-            content: message,
-          },
-        ],
-      },
-      {
-        configurable: {
-          projectId,
-          writer,
-        },
-        streamMode: "values",
-      },
-    );
+    const response = await invokeMultiAgent({
+      messages: [
+        { role: "system", content: SYSTEM_INSTRUCTION },
+        ...previousMessages,
+        { role: "user", content: message }
+      ],
+      configurable: { projectId, writer }
+    });
 
-    let fullAiResponse = "";
-
-    for await (const event of stream) {
-      if (event.event === "on_chat_model_stream" && event.data?.chunk?.content) {
-        let content = event.data.chunk.content;
-        if (typeof content === "string") {
-          fullAiResponse += content;
-          res.write(`data: ${JSON.stringify({ text: content })}\n\n`);
-        } else if (Array.isArray(content)) {
-          // In some models, stream chunks can be arrays of text parts
-          for (const part of content) {
-            if (part.type === "text" && part.text) {
-              fullAiResponse += part.text;
-              res.write(`data: ${JSON.stringify({ text: part.text })}\n\n`);
-            }
-          }
-        }
-      }
-    }
+    const fullAiResponse = response.content;
+    res.write(`data: ${JSON.stringify({ text: fullAiResponse })}\n\n`);
 
     // Save to DB
     chatDoc.messages.push({ role: "user", content: message });
@@ -161,6 +132,37 @@ Analyze these files and return the JSON architecture graph.`;
     console.error("Architecture extraction error:", error);
     // Fallback if structured output fails
     return res.status(500).json({ error: "Failed to extract architecture" });
+  }
+});
+
+agentRouter.post("/embed-codebase", async (req, res) => {
+  try {
+    const { projectId, files } = req.body;
+    if (!projectId || !files || !Array.isArray(files)) {
+      return res.status(400).json({ error: "projectId and files array are required" });
+    }
+
+    await embedCodebase(projectId, files);
+    
+    return res.status(200).json({ success: true, message: "Codebase embedded successfully" });
+  } catch (error) {
+    console.error("Embedding error:", error);
+    return res.status(500).json({ error: "Failed to embed codebase" });
+  }
+});
+
+agentRouter.post("/auto-fix", async (req, res) => {
+  try {
+    const { projectId } = req.body;
+    if (!projectId) {
+      return res.status(400).json({ error: "projectId is required" });
+    }
+
+    const result = await runAutoFixer(projectId);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Auto-fix error:", error);
+    return res.status(500).json({ error: "Failed to run auto-fixer" });
   }
 });
 

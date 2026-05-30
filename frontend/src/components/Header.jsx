@@ -1,10 +1,12 @@
 import React from 'react';
 import { Search } from 'lucide-react';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import logo from '../assets/images/logo.png';
 
 const Header = ({ searchQuery, setSearchQuery, showSearch = true }) => {
   const { user } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
 
   return (
     <header className="topbar">
@@ -26,7 +28,7 @@ const Header = ({ searchQuery, setSearchQuery, showSearch = true }) => {
       )}
 
       <div className="user-section">
-        <div className="user-profile">
+        <div className="user-profile" onClick={() => navigate('/profile')} style={{ cursor: 'pointer' }}>
           <div className="avatar-container">
             {user?.avatar ? (
               <img src={user.avatar} alt="Profile" className="avatar" />

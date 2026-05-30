@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import IDE from "./components/layout/IDE";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
+import AccountSettings from "./pages/AccountSettings";
 import { Toaster } from "react-hot-toast";
 import SocketListener from "./components/SocketListener";
 import "./styles/main.scss";
@@ -26,10 +27,18 @@ const App = () => {
               } 
             />
             <Route 
-              path="/settings" 
+              path="/profile" 
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <AccountSettings />
                 </ProtectedRoute>
               } 
             />

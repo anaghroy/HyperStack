@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getCurrentUser, logoutUser as apiLogoutUser } from '../../services/api';
+import { getCurrentUser, logoutUser as apiLogoutUser, updateProfileAPI, updatePreferencesAPI, deleteAccountAPI } from '../../services/api';
 
 // Async thunks
 export const fetchUser = createAsyncThunk('auth/fetchUser', async (_, { rejectWithValue }) => {
@@ -20,6 +20,39 @@ export const logoutUser = createAsyncThunk('auth/logoutUser', async (_, { reject
     return null;
   } catch (err) {
     return rejectWithValue(err.message || 'Failed to logout');
+  }
+});
+
+export const updateUserProfile = createAsyncThunk('auth/updateUserProfile', async (formData, { rejectWithValue }) => {
+  try {
+    const data = await updateProfileAPI(formData);
+    if (data && data.user) {
+      return data.user;
+    }
+    return rejectWithValue('Failed to update profile');
+  } catch (err) {
+    return rejectWithValue(err.message || 'Failed to update profile');
+  }
+});
+
+export const updatePreferences = createAsyncThunk('auth/updatePreferences', async (preferences, { rejectWithValue }) => {
+  try {
+    const data = await updatePreferencesAPI(preferences);
+    if (data && data.user) {
+      return data.user;
+    }
+    return rejectWithValue('Failed to update preferences');
+  } catch (err) {
+    return rejectWithValue(err.message || 'Failed to update preferences');
+  }
+});
+
+export const deleteAccount = createAsyncThunk('auth/deleteAccount', async (_, { rejectWithValue }) => {
+  try {
+    await deleteAccountAPI();
+    return null;
+  } catch (err) {
+    return rejectWithValue(err.message || 'Failed to delete account');
   }
 });
 
@@ -54,6 +87,15 @@ const authSlice = createSlice({
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
+      })
+      .addCase(deleteAccount.fulfilled, (state) => {
+        state.user = null;
+      })
+      .addCase(updateUserProfile.fulfilled, (state, action) => {
+        state.user = action.payload;
+      })
+      .addCase(updatePreferences.fulfilled, (state, action) => {
+        state.user = action.payload;
       });
   },
 });

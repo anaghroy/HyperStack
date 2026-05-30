@@ -1,6 +1,63 @@
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
+import AuditLog from "../models/auditLog.model.js";
 import { sendAuthNotification } from "../config/mq.js";
+import { redisClient } from "../config/redis.js";
+import ImageKit from "imagekit";
+
+const imagekit = new ImageKit({
+  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT
+});
+
+const generateTokens = async (res, user) => {
+  const accessToken = jwt.sign(
+    { id: user._id, email: user.email },
+    process.env.JWT_SECRET,
+    { expiresIn: "15m" }
+  );
+
+  const refreshToken = jwt.sign(
+    { id: user._id },
+    process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  // Store refresh token in Redis
+  await redisClient.setEx(`refresh_${user._id}`, 7 * 24 * 60 * 60, refreshToken);
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 15 * 60 * 1000, // 15 mins
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+};
+
+const createAuditLog = async (req, userId, provider, status, message = "") => {
+  try {
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'] || "Unknown";
+    await AuditLog.create({
+      userId,
+      ipAddress,
+      userAgent,
+      provider,
+      status,
+      message
+    });
+  } catch (error) {
+    console.error("Failed to create audit log:", error);
+  }
+};
 
 /**
  * Handles the Google OAuth callback.
@@ -74,25 +131,11 @@ export const googleCallback = async (req, res) => {
       });
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      {
-        id: user._id,
-        email: user.email,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "7d",
-      },
-    );
+    // Generate and set tokens
+    await generateTokens(res, user);
 
-    // Set cookie
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    // Audit Log
+    await createAuditLog(req, user._id, "Google", "Success", "Logged in successfully");
 
     const clientRedirectUrl =
       process.env.FRONTEND_URL || "http://localhost:5173";
@@ -190,25 +233,11 @@ export const githubCallback = async (req, res) => {
       });
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      {
-        id: user._id,
-        email: user.email,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "7d",
-      },
-    );
+    // Generate and set tokens
+    await generateTokens(res, user);
 
-    // Set auth cookie
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    // Audit Log
+    await createAuditLog(req, user._id, "GitHub", "Success", "Logged in successfully");
 
     // Redirect to frontend
     const clientRedirectUrl =
@@ -228,15 +257,38 @@ export const githubCallback = async (req, res) => {
 
 
 /**
- * Logs out the user by clearing the JWT token cookie.
+ * Logs out the user by clearing the JWT token cookie and blacklisting the token in Redis.
  */
-export const logout = (req, res) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-  });
-  return res.status(200).json({ message: "Logged out successfully" });
+export const logout = async (req, res) => {
+  try {
+    const token = req.token;
+    if (token && req.user && req.user.exp) {
+      const currentTime = Math.floor(Date.now() / 1000);
+      const timeRemaining = req.user.exp - currentTime;
+      if (timeRemaining > 0) {
+        await redisClient.setEx(`blacklist_${token}`, timeRemaining, "true");
+      }
+    }
+
+    if (req.user && req.user.id) {
+      await redisClient.del(`refresh_${req.user.id}`);
+    }
+
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+    return res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("Error in logout:", error);
+    return res.status(500).json({ message: "Internal server error during logout" });
+  }
 };
 
 /**
@@ -244,15 +296,7 @@ export const logout = (req, res) => {
  */
 export const getCurrentUser = async (req, res) => {
   try {
-    const token = req.cookies.token;
-    if (!token) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized: No token provided" });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-__v");
+    const user = await User.findById(req.user.id).select("-__v");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -271,18 +315,10 @@ export const getCurrentUser = async (req, res) => {
  */
 export const updateWebhook = async (req, res) => {
   try {
-    const token = req.cookies.token;
-    if (!token) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized: No token provided" });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { webhookUrl } = req.body;
 
     const user = await User.findByIdAndUpdate(
-      decoded.id,
+      req.user.id,
       { webhookUrl },
       { new: true }
     ).select("-__v");
@@ -297,5 +333,179 @@ export const updateWebhook = async (req, res) => {
     return res
       .status(500)
       .json({ message: "Internal server error" });
+  }
+};
+
+/**
+ * Updates the user's profile details and avatar.
+ */
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, location, city, dob, bio, webhookUrl } = req.body;
+    
+    if (bio && bio.length > 200) {
+      return res.status(400).json({ message: "Bio must be at most 200 characters long." });
+    }
+
+    let user = await User.findById(req.user.id).select("-__v");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if there is an avatar file
+    if (req.file) {
+      const fileBuffer = req.file.buffer;
+      const fileName = `avatar_${user._id}_${Date.now()}`;
+      
+      const uploadResponse = await imagekit.upload({
+        file: fileBuffer,
+        fileName: fileName,
+        folder: "HyperStack/avatars",
+        useUniqueFileName: false
+      });
+      
+      user.avatar = uploadResponse.url;
+    }
+
+    if (name !== undefined) user.name = name;
+    if (location !== undefined) user.location = location;
+    if (city !== undefined) user.city = city;
+    if (dob !== undefined) user.dob = dob;
+    if (bio !== undefined) user.bio = bio;
+    if (webhookUrl !== undefined) user.webhookUrl = webhookUrl;
+
+    await user.save();
+    return res.status(200).json({ message: "Profile updated successfully", user });
+  } catch (error) {
+    console.error("Error in updateProfile:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/**
+ * Updates the user's account preferences.
+ */
+export const updatePreferences = async (req, res) => {
+  try {
+    const { twoFactorEnabled, emailNotifications } = req.body;
+
+    let user = await User.findById(req.user.id).select("-__v");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (twoFactorEnabled !== undefined) user.twoFactorEnabled = twoFactorEnabled;
+    if (emailNotifications !== undefined) user.emailNotifications = emailNotifications;
+
+    await user.save();
+    return res.status(200).json({ message: "Preferences updated successfully", user });
+  } catch (error) {
+    console.error("Error in updatePreferences:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/**
+ * Deletes the user account and associated projects.
+ */
+export const deleteAccount = async (req, res) => {
+  try {
+    // Delete user from Auth DB
+    const user = await User.findByIdAndDelete(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Call Sandbox service to delete associated projects
+    try {
+      // Assuming Sandbox service is running internally on port 3000
+      const sandboxUrl = process.env.SANDBOX_API_URL || "http://localhost:3000";
+      await fetch(`${sandboxUrl}/api/sandbox/user-projects/${req.user.id}`, {
+        method: "DELETE"
+      });
+    } catch (sandboxError) {
+      console.error("Failed to delete user projects in sandbox:", sandboxError);
+      // We still proceed since the user account is deleted
+    }
+
+    await redisClient.del(`refresh_${req.user.id}`);
+
+    // Clear cookies
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+
+    return res.status(200).json({ message: "Account deleted successfully" });
+  } catch (error) {
+    console.error("Error in deleteAccount:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+  }
+
+
+/**
+ * Refreshes the short-lived access token using the long-lived refresh token.
+ */
+export const refreshToken = async (req, res) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      return res.status(401).json({ message: "Unauthorized: No refresh token provided" });
+    }
+
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    const storedToken = await redisClient.get(`refresh_${userId}`);
+    if (!storedToken || storedToken !== refreshToken) {
+      return res.status(401).json({ message: "Unauthorized: Invalid or revoked refresh token" });
+    }
+
+    const user = await User.findById(userId).select("-__v");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Issue a new access token
+    const newAccessToken = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    return res.status(200).json({ message: "Token refreshed successfully" });
+  } catch (error) {
+    console.error("Error in refreshToken:", error);
+    return res.status(401).json({ message: "Unauthorized: Invalid or expired refresh token" });
+  }
+};
+
+/**
+ * Retrieves the user's login history.
+ */
+export const getAuditLogs = async (req, res) => {
+  try {
+    const logs = await AuditLog.find({ userId: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(50);
+      
+    return res.status(200).json({ logs });
+  } catch (error) {
+    console.error("Error in getAuditLogs:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };

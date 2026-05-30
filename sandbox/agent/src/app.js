@@ -7,6 +7,7 @@ import { Server } from "socket.io";
 import pty from "node-pty";
 import os from "os";
 import cors from "cors";
+import { exec } from "child_process";
 
 const WORKING_DIR = "/workspace"; // This is the directory where all the project files will be stored
 
@@ -261,6 +262,22 @@ app.delete("/delete-item", async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: `Error deleting item: ${err.message}`, status: "error" });
   }
+});
+
+/**
+ * @route GET /run-linter
+ * @description Runs ESLint in the sandbox and returns the JSON output.
+ */
+app.get("/run-linter", (req, res) => {
+  exec("npx eslint . -f json", { cwd: WORKING_DIR }, (error, stdout, stderr) => {
+    try {
+      // ESLint exits with code 1 if there are errors, but stdout still contains the JSON
+      const lintResults = JSON.parse(stdout);
+      res.status(200).json({ success: true, results: lintResults });
+    } catch (parseError) {
+      res.status(500).json({ success: false, error: "Failed to parse linter output", raw: stdout || stderr });
+    }
+  });
 });
 
 export default httpServer;

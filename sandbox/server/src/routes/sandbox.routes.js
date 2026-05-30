@@ -132,4 +132,23 @@ router.delete("/project/:id", authMiddleware, async (req, res) => {
   }
 });
 
+// Internal endpoint to delete all projects for a user (called when user deletes account)
+router.delete("/user-projects/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    // In a production app, we would verify an internal API key or token here
+    await Project.deleteMany({ user: userId });
+    
+    return res.status(200).json({
+      message: "User projects deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting user projects:", error);
+    return res.status(500).json({
+      message: "Failed to delete user projects",
+      error: error.message,
+    });
+  }
+});
+
 export default router;

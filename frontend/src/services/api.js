@@ -1,6 +1,58 @@
 export const API_BASE = ''; // Use empty string to leverage Vite proxy for /api
 
 let currentSandboxId = null;
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+const subscribeTokenRefresh = (cb) => {
+  refreshSubscribers.push(cb);
+};
+
+const onRefreshed = () => {
+  refreshSubscribers.map((cb) => cb());
+  refreshSubscribers = [];
+};
+
+export const refreshTokenAPI = async () => {
+  const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error("Refresh failed");
+  return await res.json();
+};
+
+export const apiFetch = async (url, options = {}) => {
+  const res = await fetch(url, options);
+
+  if (res.status === 401 && !url.includes('/api/auth/refresh') && !url.includes('/api/auth/logout')) {
+    if (!isRefreshing) {
+      isRefreshing = true;
+      try {
+        await refreshTokenAPI();
+        isRefreshing = false;
+        onRefreshed();
+        return await fetch(url, options);
+      } catch (err) {
+        isRefreshing = false;
+        refreshSubscribers = [];
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'; // Redirect to login on refresh failure
+        }
+        throw err;
+      }
+    } else {
+      return new Promise((resolve) => {
+        subscribeTokenRefresh(async () => {
+          resolve(await fetch(url, options));
+        });
+      });
+    }
+  }
+
+  return res;
+};
 
 const agentFetch = async (endpoint, options = {}, retries = 8, delay = 1000) => {
   if (!currentSandboxId) throw new Error("Sandbox not initialized");
@@ -29,7 +81,7 @@ const agentFetch = async (endpoint, options = {}, retries = 8, delay = 1000) => 
 
 export const startSandbox = async (projectId) => {
   try {
-    const res = await fetch(`${API_BASE}/api/sandbox/start`, {
+    const res = await apiFetch(`${API_BASE}/api/sandbox/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -54,7 +106,7 @@ export const startSandbox = async (projectId) => {
 
 export const listProjects = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/sandbox/project`, {
+    const res = await apiFetch(`${API_BASE}/api/sandbox/project`, {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
@@ -68,7 +120,7 @@ export const listProjects = async () => {
 
 export const sendHeartbeat = async (sandboxId) => {
   try {
-    const res = await fetch(`${API_BASE}/api/sandbox/heartbeat`, {
+    const res = await apiFetch(`${API_BASE}/api/sandbox/heartbeat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -84,7 +136,7 @@ export const sendHeartbeat = async (sandboxId) => {
 
 export const createProject = async (title, githubUrl = "") => {
   try {
-    const res = await fetch(`${API_BASE}/api/sandbox/project`, {
+    const res = await apiFetch(`${API_BASE}/api/sandbox/project`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -99,7 +151,7 @@ export const createProject = async (title, githubUrl = "") => {
 
 export const deleteProject = async (projectId) => {
   try {
-    const res = await fetch(`${API_BASE}/api/sandbox/project/${projectId}`, {
+    const res = await apiFetch(`${API_BASE}/api/sandbox/project/${projectId}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -114,7 +166,7 @@ export const deleteProject = async (projectId) => {
 
 export const updateProject = async (projectId, updates) => {
   try {
-    const res = await fetch(`${API_BASE}/api/sandbox/project/${projectId}`, {
+    const res = await apiFetch(`${API_BASE}/api/sandbox/project/${projectId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -189,7 +241,7 @@ export const deleteItem = async (filename) => {
 
 export const invokeAI = async (message, projectId) => {
   try {
-    const res = await fetch(`${API_BASE}/api/ai/invoke`, {
+    const res = await apiFetch(`${API_BASE}/api/ai/invoke`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -204,7 +256,7 @@ export const invokeAI = async (message, projectId) => {
 
 export const getCurrentUser = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/auth/me`, {
+    const res = await apiFetch(`${API_BASE}/api/auth/me`, {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
@@ -218,7 +270,7 @@ export const getCurrentUser = async () => {
 
 export const updateWebhook = async (webhookUrl) => {
   try {
-    const res = await fetch(`${API_BASE}/api/auth/webhook`, {
+    const res = await apiFetch(`${API_BASE}/api/auth/webhook`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -234,7 +286,7 @@ export const updateWebhook = async (webhookUrl) => {
 
 export const logoutUser = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/auth/logout`, {
+    const res = await apiFetch(`${API_BASE}/api/auth/logout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -248,7 +300,7 @@ export const logoutUser = async () => {
 
 export const invokeAutocomplete = async (prefix, suffix) => {
   try {
-    const res = await fetch(`${API_BASE}/api/ai/autocomplete`, {
+    const res = await apiFetch(`${API_BASE}/api/ai/autocomplete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -264,7 +316,7 @@ export const invokeAutocomplete = async (prefix, suffix) => {
 
 export const getArchitectureGraph = async (files) => {
   try {
-    const res = await fetch(`${API_BASE}/api/ai/architecture`, {
+    const res = await apiFetch(`${API_BASE}/api/ai/architecture`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -279,3 +331,75 @@ export const getArchitectureGraph = async (files) => {
 };
 
 export const getSandboxId = () => currentSandboxId;
+
+export const updateProfileAPI = async (formData) => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/auth/profile`, {
+      method: 'PUT',
+      // DO NOT set Content-Type header here; browser will automatically set it to multipart/form-data with boundary
+      credentials: 'include',
+      body: formData,
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to update profile");
+    }
+    return await res.json();
+  } catch (error) {
+    console.error('Failed to update profile:', error);
+    throw error;
+  }
+};
+
+export const updatePreferencesAPI = async (preferences) => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/auth/preferences`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(preferences),
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to update preferences");
+    }
+    return await res.json();
+  } catch (error) {
+    console.error('Failed to update preferences:', error);
+    throw error;
+  }
+};
+
+export const deleteAccountAPI = async () => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/auth/account`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to delete account");
+    }
+    return await res.json();
+  } catch (error) {
+    console.error('Failed to delete account:', error);
+    throw error;
+  }
+};
+
+export const getAuditLogsAPI = async () => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/auth/audit-logs`, {
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      throw new Error("Failed to fetch audit logs");
+    }
+    return await res.json();
+  } catch (error) {
+    console.error('Failed to fetch audit logs:', error);
+    throw error;
+  }
+};

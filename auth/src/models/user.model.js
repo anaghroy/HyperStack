@@ -6,7 +6,13 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     name: { type: String, required: true },
     avatar: { type: String },
-    webhookUrl: { type: String, default: "" }
+    location: { type: String, default: "" },
+    city: { type: String, default: "" },
+    dob: { type: String, default: "" },
+    bio: { type: String, default: "", maxlength: 200 },
+    webhookUrl: { type: String, default: "" },
+    twoFactorEnabled: { type: Boolean, default: false },
+    emailNotifications: { type: Boolean, default: true }
 }, { timestamps: true });
 
 const User = mongoose.model('user', userSchema);

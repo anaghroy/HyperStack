@@ -97,12 +97,36 @@ spec:
                 secretKeyRef:
                   name: app-secret
                   key: JWT_SECRET
-                  
+
             - name: FRONTEND_URL
               valueFrom:
                 secretKeyRef:
                   name: app-secret
                   key: FRONTEND_URL
+
+            - name: IMAGEKIT_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: IMAGEKIT_PUBLIC_KEY
+
+            - name: IMAGEKIT_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: IMAGEKIT_PRIVATE_KEY
+
+            - name: IMAGEKIT_URL_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: IMAGEKIT_URL_ENDPOINT
+
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: REDIS_URL
           ports:
             - containerPort: 3000
               name: auth-http

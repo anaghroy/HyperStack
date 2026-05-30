@@ -6,13 +6,24 @@ import {
   logout,
   getCurrentUser,
   updateWebhook,
+  updateProfile,
+  updatePreferences,
+  deleteAccount,
+  refreshToken,
+  getAuditLogs
 } from "../controllers/auth.controller.js";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
+import { authRateLimiter } from "../middlewares/rateLimiter.js";
+import multer from "multer";
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
 
 // Google Auth routes
 router.get(
   "/google",
+  authRateLimiter,
   passport.authenticate("google", {
     session: false,
     scope: ["profile", "email"],
@@ -21,6 +32,7 @@ router.get(
 
 router.get(
   "/google/callback",
+  authRateLimiter,
   passport.authenticate("google", {
     session: false,
     failureRedirect: "/api/auth/failure",
@@ -31,6 +43,7 @@ router.get(
 // GitHub Auth routes
 router.get(
   "/github",
+  authRateLimiter,
   passport.authenticate("github", {
     session: false,
     scope: ["user:email"],
@@ -39,6 +52,7 @@ router.get(
 
 router.get(
   "/github/callback",
+  authRateLimiter,
   passport.authenticate("github", {
     session: false,
     failureRedirect: "/api/auth/failure",
@@ -52,12 +66,27 @@ router.get("/failure", (req, res) => {
 });
 
 // Logout route
-router.post("/logout", logout);
+router.post("/logout", authMiddleware, logout);
 
 // Get current authenticated user details
-router.get("/me", getCurrentUser);
+router.get("/me", authMiddleware, getCurrentUser);
 
 // Update user webhook
-router.put("/webhook", updateWebhook);
+router.put("/webhook", authMiddleware, updateWebhook);
+
+// Update user profile
+router.put("/profile", authMiddleware, upload.single("avatar"), updateProfile);
+
+// Update user preferences
+router.put("/preferences", authMiddleware, updatePreferences);
+
+// Delete user account
+router.delete("/account", authMiddleware, deleteAccount);
+
+// Refresh access token
+router.post("/refresh", refreshToken);
+
+// Get audit logs
+router.get("/audit-logs", authMiddleware, getAuditLogs);
 
 export default router;

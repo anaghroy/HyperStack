@@ -2,7 +2,7 @@ import Redis from "ioredis";
 import { deletePod } from "../kubernetes/pod.js";
 import { deleteService } from "../kubernetes/service.js";
 
-const redis = new Redis(process.env.REDIS_URL);
+export const redis = new Redis(process.env.REDIS_URL);
 const subscriber = new Redis(process.env.REDIS_URL);
 
 export async function createSandboxKey(sandboxId) {

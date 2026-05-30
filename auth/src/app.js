@@ -10,6 +10,9 @@ import authRoutes from "./routes/auth.routes.js";
 
 const app = express();
 
+// Trust proxy for rate limiting and real IPs when behind NGINX/Ingress
+app.set('trust proxy', 1);
+
 //use middleware
 app.use(express.json());
 app.use(morgan("dev"));
