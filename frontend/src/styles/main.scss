@@ -5,12 +5,16 @@
 /* Components */
 @use "./components/layout";
 @use "./components/explorer";
-@use "./components/editor";
+@use "./components/EditorPane.scss";
 @use "./components/panels";
 @use "./components/aichat";
+@use "./components/ArchitectureGraph";
 @use "./components/auth";
+@use "./components/header";
+
+/*pages*/
 @use "./pages/dashboard";
 @use "./pages/settings";
 @use "./pages/accountSettings";
-@use "./components/ArchitectureGraph";
+@use "./pages/connectRepo";
 

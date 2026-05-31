@@ -10,7 +10,10 @@ import {
   updatePreferences,
   deleteAccount,
   refreshToken,
-  getAuditLogs
+  getAuditLogs,
+  getGithubRepos,
+  getNotifications,
+  markNotificationsRead
 } from "../controllers/auth.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { authRateLimiter } from "../middlewares/rateLimiter.js";
@@ -46,7 +49,7 @@ router.get(
   authRateLimiter,
   passport.authenticate("github", {
     session: false,
-    scope: ["user:email"],
+    scope: ["user:email", "repo"],
   })
 );
 
@@ -88,5 +91,12 @@ router.post("/refresh", refreshToken);
 
 // Get audit logs
 router.get("/audit-logs", authMiddleware, getAuditLogs);
+
+// Get Github Repos
+router.get("/github/repos", authMiddleware, getGithubRepos);
+
+// Notifications
+router.get("/notifications", authMiddleware, getNotifications);
+router.put("/notifications/read", authMiddleware, markNotificationsRead);
 
 export default router;

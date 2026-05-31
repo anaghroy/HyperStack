@@ -1,6 +1,7 @@
 import amqplib from "amqplib";
 
-const QUEUE = "auth_notification_queue";
+const QUEUE = "auth_notification_queue_v2";
+const DLX = "auth_notification_dlx";
 
 let channel;
 
@@ -20,6 +21,8 @@ async function connectRabbitMQ() {
 
     await channel.assertQueue(QUEUE, {
       durable: true,
+      deadLetterExchange: DLX,
+      deadLetterRoutingKey: "failed"
     });
 
     console.log("RabbitMQ connected successfully!");

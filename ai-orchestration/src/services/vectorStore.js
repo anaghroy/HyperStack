@@ -59,10 +59,47 @@ export const embedCodebase = async (projectId, files) => {
 export const searchCodebase = async (projectId, query, k = 5) => {
   const vectorStore = await initVectorStore();
   
-  // Search within the specific project
-  const results = await vectorStore.similaritySearch(query, k, {
+  // 1. Fetch top 20 candidates from vector search
+  const results = await vectorStore.similaritySearch(query, 20, {
     preFilter: { projectId: { $eq: projectId } }
   });
-  
-  return results;
+
+  if (results.length === 0) return [];
+
+  // 2. Prepare documents for Cohere Re-rank
+  const documents = results.map(doc => doc.pageContent);
+
+  try {
+    // 3. Call Cohere Re-rank API
+    const response = await fetch("https://api.cohere.ai/v1/rerank", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.COHERE_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "rerank-english-v3.0",
+        query: query,
+        documents: documents,
+        top_n: k
+      })
+    });
+
+    if (!response.ok) {
+      console.warn("Cohere Re-rank failed, falling back to original vector search results", await response.text());
+      return results.slice(0, k);
+    }
+
+    const rerankData = await response.json();
+    
+    // 4. Map the re-ranked indices back to the original documents
+    const rerankedResults = rerankData.results.map(r => results[r.index]);
+    
+    return rerankedResults;
+
+  } catch (error) {
+    console.error("Error during Cohere re-ranking:", error);
+    // Fallback to basic vector search on error
+    return results.slice(0, k);
+  }
 };

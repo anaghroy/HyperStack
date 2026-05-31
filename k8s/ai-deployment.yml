@@ -50,6 +50,11 @@ spec:
                 secretKeyRef:
                   name: app-secret
                   key: AI_MODEL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: REDIS_URL
           resources:
             requests:
               cpu: "250m"

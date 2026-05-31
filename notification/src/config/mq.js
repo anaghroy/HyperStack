@@ -1,6 +1,11 @@
 import amqplib from "amqplib";
 
-const QUEUE = "auth_notification_queue";
+const QUEUE = "auth_notification_queue_v2";
+const DLX = "auth_notification_dlx";
+const DLQ = "auth_notification_dlq";
+const RETRY_EXCHANGE = "auth_notification_retry_ex";
+const RETRY_QUEUE = "auth_notification_retry_q";
+
 let channel;
 let messageHandler = null;
 
@@ -22,11 +27,25 @@ export async function connectRabbitMQ() {
     const connection = await amqplib.connect(uri);
     channel = await connection.createChannel();
 
+    await channel.assertExchange(DLX, "direct", { durable: true });
+    await channel.assertQueue(DLQ, { durable: true });
+    await channel.bindQueue(DLQ, DLX, "failed");
+
+    await channel.assertExchange(RETRY_EXCHANGE, "direct", { durable: true });
+    await channel.assertQueue(RETRY_QUEUE, {
+      durable: true,
+      deadLetterExchange: "", // default exchange
+      deadLetterRoutingKey: QUEUE // route back to original queue when TTL expires
+    });
+    await channel.bindQueue(RETRY_QUEUE, RETRY_EXCHANGE, "retry");
+
     await channel.assertQueue(QUEUE, {
       durable: true,
+      deadLetterExchange: DLX,
+      deadLetterRoutingKey: "failed"
     });
 
-    console.log("RabbitMQ connected successfully!");
+    console.log("RabbitMQ connected successfully with DLQ setup!");
 
     // Automatically re-register the consumer when connection is established
     if (messageHandler) {
@@ -36,8 +55,25 @@ export async function connectRabbitMQ() {
             await messageHandler(msg.content.toString());
             channel.ack(msg);
           } catch (err) {
-            console.error("Message processing failed:", err);
-            // channel.nack(msg);
+            console.error("Message processing failed:", err.message);
+            
+            const headers = msg.properties.headers || {};
+            const retryCount = headers['x-retry-count'] || 0;
+            const MAX_RETRIES = 3;
+
+            if (retryCount < MAX_RETRIES) {
+              const backoff = Math.pow(2, retryCount) * 5000; // 5s, 10s, 20s
+              console.log(`Retrying message in ${backoff}ms (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
+              
+              channel.publish(RETRY_EXCHANGE, "retry", msg.content, {
+                expiration: backoff.toString(),
+                headers: { ...headers, 'x-retry-count': retryCount + 1 }
+              });
+              channel.ack(msg);
+            } else {
+              console.error("Max retries reached. Sending to DLQ.");
+              channel.nack(msg, false, false);
+            }
           }
         }
       });

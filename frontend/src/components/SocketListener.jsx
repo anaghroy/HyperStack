@@ -27,6 +27,7 @@ const SocketListener = () => {
         duration: 5000,
         icon: '🔔',
       });
+      window.dispatchEvent(new CustomEvent('new_notification', { detail: data }));
     });
 
     return () => {

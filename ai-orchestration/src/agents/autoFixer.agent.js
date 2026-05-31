@@ -52,7 +52,7 @@ Format:
 `;
 
     // 4. Invoke model to get fixes
-    const model = getModel(process.env.AI_MODEL || "orchestrator");
+    const model = getModel(process.env.AI_MODEL || "llama");
     const aiResponse = await model.invoke([
       new SystemMessage("You are a strict JSON-only AI auto-fixer."),
       new HumanMessage(prompt)
@@ -72,7 +72,23 @@ Format:
       await axios.patch(`http://sandbox-service-${projectId}:3000/update-files`, {
         updates: fixedFilesPayload
       });
-      return { status: "success", message: `Fixed ${fixedFilesPayload.length} files.` };
+      
+      // 6. Verify the fixes by running the linter again
+      const verifyResponse = await axios.get(`http://sandbox-service-${projectId}:3000/run-linter`);
+      if (verifyResponse.data.success && verifyResponse.data.results) {
+        const remainingErrors = verifyResponse.data.results.filter(f => f.errorCount > 0 || f.warningCount > 0);
+        if (remainingErrors.length === 0) {
+          return { status: "success", message: `Successfully fixed ${fixedFilesPayload.length} files.` };
+        } else {
+          return { 
+            status: "partial_success", 
+            message: `Applied fixes, but ${remainingErrors.length} files still have linting errors.`,
+            remainingErrors
+          };
+        }
+      }
+      
+      return { status: "success", message: `Fixed ${fixedFilesPayload.length} files (verification skipped).` };
     }
 
     return { status: "success", message: "No fixes applied." };

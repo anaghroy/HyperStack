@@ -10,18 +10,12 @@ const fallbackChain = [
   "cohere",
   "deepseek",
   "qwen",
-  "kimi",
-  "mistral",
-  "minimax",
-  "step"
-];
-
 const invokeAgent = async (params) => {
-  const defaultModelName = process.env.AI_MODEL || "orchestrator";
+  const defaultModelName = process.env.AI_MODEL || "llama";
   
-  const modelsToTry = defaultModelName === "orchestrator" 
-    ? fallbackChain 
-    : [defaultModelName];
+  const modelsToTry = defaultModelName === "llama" 
+    ? ["llama", "mistral", "qwen"] 
+    : [defaultModelName, "llama", "mistral"];
 
   let lastError;
 
@@ -48,11 +42,11 @@ const invokeAgent = async (params) => {
 };
 
 const streamAgent = async function* (inputs, config) {
-  const defaultModelName = process.env.AI_MODEL || "orchestrator";
+  const defaultModelName = process.env.AI_MODEL || "llama";
   
-  const modelsToTry = defaultModelName === "orchestrator" 
-    ? fallbackChain 
-    : [defaultModelName];
+  const modelsToTry = defaultModelName === "llama" 
+    ? ["llama", "mistral", "qwen"] 
+    : [defaultModelName, "llama", "mistral"];
 
   let lastError;
 

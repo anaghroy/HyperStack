@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import  { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
-import { Play, RotateCcw, Box, Copy, Check, Save, Layout, Globe, RefreshCw } from "lucide-react";
-import "./EditorPane.scss";
+import { Box, Copy, Check, Layout, Globe, RefreshCw } from "lucide-react";
 import { invokeAutocomplete, readFile, updateFile, getSandboxId } from "../../services/api";
 
 const EditorPane = ({ selectedFile }) => {
@@ -114,12 +113,12 @@ const EditorPane = ({ selectedFile }) => {
         // Trigger autocomplete only if the user explicitly types or waits
         if (context.triggerKind === monaco.languages.InlineCompletionTriggerKind.Explicit || textUntilPosition.trim().length > 10) {
           try {
-            const completion = await invokeAutocomplete(textUntilPosition);
-            if (completion) {
+            const data = await invokeAutocomplete(textUntilPosition);
+            if (data && data.completion) {
               return {
                 items: [
                   {
-                    insertText: completion,
+                    insertText: data.completion,
                     range: new monaco.Range(
                       position.lineNumber,
                       position.column,
@@ -136,7 +135,8 @@ const EditorPane = ({ selectedFile }) => {
         }
         return { items: [] };
       },
-      freeInlineCompletions: true,
+      freeInlineCompletions: () => {},
+      disposeInlineCompletions: () => {},
     });
   };
 

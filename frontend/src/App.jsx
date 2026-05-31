@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import IDE from "./components/layout/IDE";
 import Login from "./pages/Login";
+import ConnectRepo from "./pages/ConnectRepo";
 import Settings from "./pages/Settings";
 import AccountSettings from "./pages/AccountSettings";
 import { Toaster } from "react-hot-toast";
@@ -23,6 +24,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/connect-repo" 
+              element={
+                <ProtectedRoute>
+                  <ConnectRepo />
                 </ProtectedRoute>
               } 
             />

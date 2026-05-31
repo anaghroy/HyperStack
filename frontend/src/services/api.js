@@ -23,6 +23,36 @@ export const refreshTokenAPI = async () => {
   return await res.json();
 };
 
+export const getGithubReposAPI = async () => {
+  const res = await apiFetch(`${API_BASE}/api/auth/github/repos`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error("Failed to fetch Github repos");
+  return await res.json();
+};
+
+export const getNotificationsAPI = async () => {
+  const res = await apiFetch(`${API_BASE}/api/auth/notifications`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error("Failed to fetch notifications");
+  return await res.json();
+};
+
+export const markNotificationsReadAPI = async () => {
+  const res = await apiFetch(`${API_BASE}/api/auth/notifications/read`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error("Failed to mark notifications as read");
+  return await res.json();
+};
+
 export const apiFetch = async (url, options = {}) => {
   const res = await fetch(url, options);
 

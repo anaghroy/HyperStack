@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import AuditLog from "../models/auditLog.model.js";
+import Notification from "../models/notification.model.js";
 import { sendAuthNotification } from "../config/mq.js";
 import { redisClient } from "../config/redis.js";
 import ImageKit from "imagekit";
@@ -150,6 +151,33 @@ export const googleCallback = async (req, res) => {
   }
 };
 
+export const getGithubRepos = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user || !user.githubAccessToken) {
+      return res.status(400).json({ error: "User is not connected to GitHub or missing access token" });
+    }
+
+    const response = await fetch("https://api.github.com/user/repos?per_page=100&sort=updated", {
+      headers: {
+        Authorization: `token ${user.githubAccessToken}`,
+        Accept: "application/vnd.github.v3+json"
+      }
+    });
+
+    if (!response.ok) {
+      return res.status(response.status).json({ error: "Failed to fetch repositories from GitHub" });
+    }
+
+    const repos = await response.json();
+
+    return res.status(200).json({ repos: simplifiedRepos });
+  } catch (error) {
+    console.error("Error fetching GitHub repos:", error);
+    return res.status(500).json({ message: "Internal server error fetching GitHub repos." });
+  }
+};
+
 /**
  * Handles the GitHub OAuth callback.
  * Passport.js authenticates the request and attaches the profile to `req.user`.
@@ -189,6 +217,11 @@ export const githubCallback = async (req, res) => {
       githubId: profile.id,
     });
 
+    if (user && profile.accessToken) {
+      user.githubAccessToken = profile.accessToken;
+      await user.save();
+    }
+
     if (!user) {
       // Check if account already exists with same email
       user = await User.findOne({
@@ -203,6 +236,10 @@ export const githubCallback = async (req, res) => {
           user.avatar = avatar;
         }
 
+        if (profile.accessToken) {
+          user.githubAccessToken = profile.accessToken;
+        }
+
         await user.save();
       } else {
         // Brand new user
@@ -213,6 +250,7 @@ export const githubCallback = async (req, res) => {
           email: finalEmail,
           name,
           avatar,
+          githubAccessToken: profile.accessToken,
         });
 
         await user.save();
@@ -387,7 +425,7 @@ export const updateProfile = async (req, res) => {
  */
 export const updatePreferences = async (req, res) => {
   try {
-    const { twoFactorEnabled, emailNotifications } = req.body;
+    const { twoFactorEnabled, emailNotifications, webhookUrl } = req.body;
 
     let user = await User.findById(req.user.id).select("-__v");
     if (!user) {
@@ -396,6 +434,7 @@ export const updatePreferences = async (req, res) => {
 
     if (twoFactorEnabled !== undefined) user.twoFactorEnabled = twoFactorEnabled;
     if (emailNotifications !== undefined) user.emailNotifications = emailNotifications;
+    if (webhookUrl !== undefined) user.webhookUrl = webhookUrl;
 
     await user.save();
     return res.status(200).json({ message: "Preferences updated successfully", user });
@@ -507,5 +546,30 @@ export const getAuditLogs = async (req, res) => {
   } catch (error) {
     console.error("Error in getAuditLogs:", error);
     return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getNotifications = async (req, res) => {
+  try {
+    const notifications = await Notification.find({ userId: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(50);
+    res.status(200).json({ notifications });
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({ error: "Failed to fetch notifications" });
+  }
+};
+
+export const markNotificationsRead = async (req, res) => {
+  try {
+    await Notification.updateMany(
+      { userId: req.user.id, isRead: false },
+      { $set: { isRead: true } }
+    );
+    res.status(200).json({ message: "Notifications marked as read" });
+  } catch (error) {
+    console.error("Error marking notifications read:", error);
+    res.status(500).json({ error: "Failed to update notifications" });
   }
 };

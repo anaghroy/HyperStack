@@ -62,6 +62,25 @@ setNotificationHandler(async (messageContent) => {
       templateProps: { username: name, provider: provider || "your provider", timestamp: timestamp }
     });
   } else if (type === "APP_NOTIFICATION") {
+    // Save to MongoDB
+    if (userId) {
+      try {
+        const db = mongoose.connection.db;
+        if (db) {
+          await db.collection("notifications").insertOne({
+            userId: new mongoose.Types.ObjectId(userId),
+            type: "SYSTEM",
+            message,
+            isRead: false,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        }
+      } catch (err) {
+        console.error("Failed to save notification to DB:", err);
+      }
+    }
+
     // Emit to real-time socket
     if (ioInstance && userId) {
       ioInstance.to(userId).emit("notification", { message, timestamp: timestamp || new Date() });

@@ -206,7 +206,7 @@ const Dashboard = () => {
               <p>Manage and organize your AI code projects.</p>
             </div>
             <div className="header-actions">
-              <button className="secondary-btn">
+              <button className="secondary-btn" onClick={() => navigate('/connect-repo')}>
                 <LinkIcon size={16} />
                 <span>Connect Repo</span>
               </button>

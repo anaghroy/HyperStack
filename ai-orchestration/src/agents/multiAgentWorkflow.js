@@ -21,7 +21,7 @@ const agentState = {
 };
 
 const codeWriterNode = async (state) => {
-  const model = getModel(process.env.AI_MODEL || "orchestrator");
+  const model = getModel(process.env.AI_MODEL || "llama");
   // Bind tools to the model
   const modelWithTools = model.bindTools([listFiles, readFiles, updateFiles]);
   
@@ -41,7 +41,7 @@ If you need to query the entire codebase for context, ask the user to clarify or
 };
 
 const codeReviewerNode = async (state) => {
-  const model = getModel(process.env.AI_MODEL || "orchestrator");
+  const model = getModel(process.env.AI_MODEL || "llama");
   
   const systemMessage = new SystemMessage(`You are an expert Code Reviewer agent.
 Review the latest AIMessage from the Code Writer.

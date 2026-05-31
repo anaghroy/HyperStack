@@ -1,12 +1,40 @@
 import { Router } from "express";
+import crypto from "crypto";
 import { invokeMultiAgent, multiAgentGraph } from "../agents/multiAgentWorkflow.js";
 import { SYSTEM_INSTRUCTION, llamaModel } from "../models/index.js";
 import { ChatHistory } from "../models/chat.model.js";
 import { z } from "zod";
 import { embedCodebase } from "../services/vectorStore.js";
 import { runAutoFixer } from "../agents/autoFixer.agent.js";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
+import { TokenUsage, trackTokenUsage } from "../models/tokenUsage.model.js";
+import { redisClient } from "../config/redis.js";
 
 const agentRouter = Router();
+
+// Apply auth middleware to all routes
+agentRouter.use(authMiddleware);
+
+// Middleware to check daily token limit
+const checkTokenLimit = async (req, res, next) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const date = new Date().toISOString().split('T')[0];
+    const usage = await TokenUsage.findOne({ userId, date });
+    const DAILY_LIMIT = 50000;
+    
+    if (usage && usage.tokensUsed >= DAILY_LIMIT) {
+      return res.status(429).json({ error: "Daily token limit exceeded" });
+    }
+    next();
+  } catch (error) {
+    console.error("Token Limit Check Error:", error);
+    // Don't block the request if the DB check fails, just proceed
+    next();
+  }
+};
+
+agentRouter.use(checkTokenLimit);
 
 agentRouter.post("/invoke", async (req, res) => {
   try {
@@ -45,6 +73,9 @@ agentRouter.post("/invoke", async (req, res) => {
     });
 
     const fullAiResponse = response.content;
+    const tokens = response.tokens || 100; // Fallback estimate if token usage isn't present
+    await trackTokenUsage(req.user.id || req.user._id, tokens);
+
     res.write(`data: ${JSON.stringify({ text: fullAiResponse })}\n\n`);
 
     // Save to DB
@@ -72,7 +103,6 @@ agentRouter.post("/autocomplete", async (req, res) => {
     const { prefix, suffix } = req.body;
     
     // We construct a simple prompt to get the missing code.
-    // Llama 3 handles instructions well.
     const prompt = `You are a fast autocomplete engine. You are provided with a prefix and a suffix of a code file. 
 Return ONLY the exact code that should be inserted between the prefix and suffix to complete the code. 
 Do not add any markdown formatting, backticks, explanations, or chat. Just the raw code.
@@ -85,8 +115,22 @@ ${suffix || ""}
 
 MIDDLE:`;
 
+    // Semantic Caching with Redis
+    const cacheKey = `autocomplete:${crypto.createHash('sha256').update(prompt).digest('hex')}`;
+    const cachedResponse = await redisClient.get(cacheKey);
+    if (cachedResponse) {
+      return res.status(200).json({ completion: cachedResponse });
+    }
+
     const response = await llamaModel.invoke(prompt);
     
+    // Cache the successful response for 1 hour
+    await redisClient.setex(cacheKey, 3600, response.content);
+
+    // Track tokens
+    const tokens = response.response_metadata?.tokenUsage?.totalTokens || 50;
+    await trackTokenUsage(req.user.id || req.user._id, tokens);
+
     return res.status(200).json({ completion: response.content });
   } catch (error) {
     console.error("Autocomplete error:", error);
@@ -122,15 +166,26 @@ ${files.map(f => `--- FILE: ${f.path} ---\n${f.content || 'Empty file'}\n`).join
 
 Analyze these files and return the JSON architecture graph.`;
 
-    // Some models (like smaller local llamas) might struggle with .withStructuredOutput depending on the provider, 
-    // but assuming standard LangChain usage:
+    // Cache lookup
+    const cacheKey = `arch:${crypto.createHash('sha256').update(prompt).digest('hex')}`;
+    const cachedArch = await redisClient.get(cacheKey);
+    if (cachedArch) {
+      return res.status(200).json(JSON.parse(cachedArch));
+    }
+
     const structuredModel = llamaModel.withStructuredOutput(architectureSchema, { name: "architecture" });
     const response = await structuredModel.invoke(prompt);
+
+    // Cache the response
+    await redisClient.setex(cacheKey, 86400, JSON.stringify(response));
+
+    // Track tokens
+    const tokens = 300 + (files.length * 50); // estimate since structured output might not expose tokens easily
+    await trackTokenUsage(req.user.id || req.user._id, tokens);
 
     return res.status(200).json(response);
   } catch (error) {
     console.error("Architecture extraction error:", error);
-    // Fallback if structured output fails
     return res.status(500).json({ error: "Failed to extract architecture" });
   }
 });
