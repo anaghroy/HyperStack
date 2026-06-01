@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logoutUser } from '../redux/slices/authSlice';
 import { setActiveProject, setSandboxId } from '../redux/slices/projectSlice';
-import { listProjects, createProject, startSandbox, deleteProject, updateProject } from '../services/api';
+import { listProjects, createProject, startSandbox, deleteProject, updateProject, getSharedProjectsAPI, leaveProjectAPI } from '../services/api';
 import { Plus, Folder, Loader2, Search, LogOut, Trash2, LayoutDashboard, Users, Settings, Rocket, Link as LinkIcon, Edit2, ExternalLink, X } from 'lucide-react';
 import { useDebounce } from '../hooks/useDebounce';
 import Header from '../components/Header';
+import SharedProjectCard from '../components/SharedProjectCard';
 
 const Dashboard = () => {
   const dispatch = useDispatch();
@@ -18,8 +19,10 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const [projects, setProjects] = useState([]);
+  const [sharedProjects, setSharedProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startingProjectId, setStartingProjectId] = useState(null);
+  const [viewMode, setViewMode] = useState('owned'); // 'owned' or 'shared'
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,17 +39,36 @@ const Dashboard = () => {
   const [editDescription, setEditDescription] = useState('');
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    if (viewMode === 'owned') {
+      fetchProjects();
+    } else {
+      fetchSharedProjects();
+    }
+  }, [viewMode]);
 
   const fetchProjects = async () => {
     try {
+      setLoading(true);
       const data = await listProjects();
       if (data && data.projects) {
         setProjects(data.projects);
       }
     } catch (error) {
       console.error("Failed to load projects", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSharedProjects = async () => {
+    try {
+      setLoading(true);
+      const data = await getSharedProjectsAPI();
+      if (data && data.projects) {
+        setSharedProjects(data.projects);
+      }
+    } catch (error) {
+      console.error("Failed to load shared projects", error);
     } finally {
       setLoading(false);
     }
@@ -113,6 +135,17 @@ const Dashboard = () => {
     }
   };
 
+  const handleLeaveProject = async (projectId) => {
+    if (!window.confirm("Are you sure you want to leave this project?")) return;
+    try {
+      await leaveProjectAPI(projectId);
+      setSharedProjects(sharedProjects.filter(p => p._id !== projectId));
+    } catch (error) {
+      console.error("Failed to leave project:", error);
+      alert("Failed to leave project.");
+    }
+  };
+
   const handleEditClick = (e, project) => {
     e.stopPropagation();
     setEditingProject(project);
@@ -141,7 +174,8 @@ const Dashboard = () => {
     }
   };
 
-  const filteredProjects = projects.filter(project => 
+  const currentList = viewMode === 'owned' ? projects : sharedProjects;
+  const filteredProjects = currentList.filter(project => 
     project.title.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
@@ -177,11 +211,11 @@ const Dashboard = () => {
             <LayoutDashboard size={18} />
             <span>Overview</span>
           </div>
-          <div className="nav-item active">
+          <div className={`nav-item ${viewMode === 'owned' ? 'active' : ''}`} onClick={() => setViewMode('owned')}>
             <Folder size={18} />
             <span>My Projects</span>
           </div>
-          <div className="nav-item">
+          <div className={`nav-item ${viewMode === 'shared' ? 'active' : ''}`} onClick={() => setViewMode('shared')}>
             <Users size={18} />
             <span>Shared Projects</span>
           </div>
@@ -202,19 +236,21 @@ const Dashboard = () => {
         <main className="dashboard-content">
           <div className="content-header">
             <div className="title-section">
-              <h1>My Projects</h1>
-              <p>Manage and organize your AI code projects.</p>
+              <h1>{viewMode === 'owned' ? 'My Projects' : 'Shared With Me'}</h1>
+              <p>{viewMode === 'owned' ? 'Manage and organize your AI code projects.' : 'Projects you are collaborating on.'}</p>
             </div>
-            <div className="header-actions">
-              <button className="secondary-btn" onClick={() => navigate('/connect-repo')}>
-                <LinkIcon size={16} />
-                <span>Connect Repo</span>
-              </button>
-              <button className="primary-btn" onClick={() => setIsCreating(true)}>
-                <Plus size={18} />
-                <span>Create New Project</span>
-              </button>
-            </div>
+            {viewMode === 'owned' && (
+              <div className="header-actions">
+                <button className="secondary-btn" onClick={() => navigate('/connect-repo')}>
+                  <LinkIcon size={16} />
+                  <span>Connect Repo</span>
+                </button>
+                <button className="primary-btn" onClick={() => setIsCreating(true)}>
+                  <Plus size={18} />
+                  <span>Create New Project</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {isCreating && (
@@ -246,18 +282,28 @@ const Dashboard = () => {
           )}
 
           <div className="projects-grid">
-            {loading && !isCreating && projects.length === 0 ? (
+            {loading && !isCreating && currentList.length === 0 ? (
               <div className="loading-state">
                 <Loader2 size={32} className="spin" />
               </div>
-            ) : projects.length === 0 ? (
+            ) : currentList.length === 0 ? (
               <div className="empty-state">
-                <Folder size={48} />
-                <h3>No projects yet</h3>
-                <p>Create your first project to get started.</p>
-                <button className="primary-btn mt-4" onClick={() => setIsCreating(true)}>
-                  Create Project
-                </button>
+                {viewMode === 'owned' ? (
+                  <>
+                    <Folder size={48} />
+                    <h3>No projects yet</h3>
+                    <p>Create your first project to get started.</p>
+                    <button className="primary-btn mt-4" onClick={() => setIsCreating(true)}>
+                      Create Project
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Users size={48} />
+                    <h3>No shared projects</h3>
+                    <p>When someone shares a project with you, it will appear here.</p>
+                  </>
+                )}
               </div>
             ) : filteredProjects.length === 0 ? (
               <div className="empty-state" style={{ gridColumn: '1 / -1', padding: '40px' }}>
@@ -267,6 +313,15 @@ const Dashboard = () => {
               </div>
             ) : (
               filteredProjects.map((project) => (
+                viewMode === 'shared' ? (
+                  <SharedProjectCard 
+                    key={project._id}
+                    project={project}
+                    startingProjectId={startingProjectId}
+                    onOpen={handleOpenProject}
+                    onLeave={handleLeaveProject}
+                  />
+                ) : (
                 <div 
                   key={project._id} 
                   className={`project-card ${startingProjectId === project._id ? 'starting' : ''}`}
@@ -296,6 +351,7 @@ const Dashboard = () => {
                     </>
                   )}
                 </div>
+                )
               ))
             )}
           </div>

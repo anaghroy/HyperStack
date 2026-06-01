@@ -12,7 +12,25 @@ const projectSchema = new mongoose.Schema({
     githubUrl: {
         type: String,
         default: ""
-    }
+    },
+    collaborators: [
+        {
+            user: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'user',
+                required: true
+            },
+            role: {
+                type: String,
+                enum: ['Editor', 'Viewer'],
+                default: 'Viewer'
+            },
+            addedAt: {
+                type: Date,
+                default: Date.now
+            }
+        }
+    ]
 });
 
 const Project = mongoose.model('project', projectSchema);

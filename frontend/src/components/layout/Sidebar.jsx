@@ -1,7 +1,12 @@
-import React from 'react';
-import { Files, Search, GitBranch, Settings, LayoutGrid, Network } from 'lucide-react';
+import React, { useState } from 'react';
+import { Files, Search, GitBranch, Settings, LayoutGrid, Network, UserPlus } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import ShareProjectModal from '../modals/ShareProjectModal';
 
 const Sidebar = ({ children, activeTab, setActiveTab }) => {
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const { activeProject } = useSelector((state) => state.project);
+
   return (
     <div className="sidebar-container">
       <div className="activity-bar">
@@ -23,12 +28,20 @@ const Sidebar = ({ children, activeTab, setActiveTab }) => {
           </div>
         </div>
         <div className="activity-bottom">
-          <div className="activity-icon">
+          <div className="activity-icon" onClick={() => setIsShareModalOpen(true)} title="Share Project">
+            <UserPlus size={24} strokeWidth={1.5} />
+          </div>
+          <div className="activity-icon" title="Settings">
             <Settings size={24} strokeWidth={1.5} />
           </div>
         </div>
       </div>
       {children}
+      <ShareProjectModal 
+        isOpen={isShareModalOpen} 
+        onClose={() => setIsShareModalOpen(false)} 
+        activeProject={activeProject}
+      />
     </div>
   );
 };

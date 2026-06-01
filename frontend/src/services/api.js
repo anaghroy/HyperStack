@@ -179,6 +179,31 @@ export const createProject = async (title, githubUrl = "") => {
   }
 };
 
+export const shareProjectAPI = async (projectId, email, role = 'Editor') => {
+  const res = await apiFetch(`${API_BASE}/api/sandbox/project/${projectId}/share`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, role })
+  });
+  return res.json();
+};
+
+export const getSharedProjectsAPI = async () => {
+  const res = await apiFetch(`${API_BASE}/api/sandbox/shared-projects`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return res.json();
+};
+
+export const leaveProjectAPI = async (projectId) => {
+  const res = await apiFetch(`${API_BASE}/api/sandbox/project/${projectId}/share`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return res.json();
+};
+
 export const deleteProject = async (projectId) => {
   try {
     const res = await apiFetch(`${API_BASE}/api/sandbox/project/${projectId}`, {
