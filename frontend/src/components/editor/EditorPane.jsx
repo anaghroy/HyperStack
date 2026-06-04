@@ -3,7 +3,7 @@ import Editor from "@monaco-editor/react";
 import { Box, Copy, Check, Layout, Globe, RefreshCw } from "lucide-react";
 import { invokeAutocomplete, readFile, updateFile, getSandboxId } from "../../services/api";
 
-const EditorPane = ({ selectedFile }) => {
+const EditorPane = ({ selectedFile, selectedLine }) => {
   const [activeTab, setActiveTab] = useState(null);
   const [fileContents, setFileContents] = useState({});
   const [copied, setCopied] = useState(false);
@@ -101,6 +101,17 @@ const EditorPane = ({ selectedFile }) => {
   };
 
   const handleEditorDidMount = (editor, monaco) => {
+    editorRef.current = editor;
+    
+    // Auto-scroll to line if selectedLine is present on mount
+    if (selectedLine) {
+      setTimeout(() => {
+        editor.revealLineInCenter(selectedLine);
+        editor.setPosition({ lineNumber: selectedLine, column: 1 });
+        editor.focus();
+      }, 100);
+    }
+
     monaco.languages.registerInlineCompletionsProvider("javascript", {
       provideInlineCompletions: async (model, position, context, token) => {
         const textUntilPosition = model.getValueInRange({
@@ -139,6 +150,14 @@ const EditorPane = ({ selectedFile }) => {
       disposeInlineCompletions: () => {},
     });
   };
+
+  useEffect(() => {
+    if (selectedLine && editorRef.current) {
+      editorRef.current.revealLineInCenter(selectedLine);
+      editorRef.current.setPosition({ lineNumber: selectedLine, column: 1 });
+      editorRef.current.focus();
+    }
+  }, [selectedLine, activeTab]);
 
   if (openTabs.length === 0) {
     return (

@@ -5,8 +5,10 @@ import StatusBar from './StatusBar';
 import BottomPanel from '../panels/BottomPanel';
 import EditorPane from '../editor/EditorPane';
 import FileTree from '../explorer/FileTree';
+import SearchPanel from '../explorer/SearchPanel';
 import AIChatPanel from '../panels/AIChatPanel';
 import ArchitectureGraph from '../graph/ArchitectureGraph';
+import DatabaseDesignerHub from '../db-designer/DatabaseDesignerHub';
 import { startSandbox, createProject, sendHeartbeat } from '../../services/api';
 
 import { useNavigate } from 'react-router-dom';
@@ -25,6 +27,7 @@ const IDE = () => {
   const [isPanelFullscreen, setIsPanelFullscreen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(250);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedLine, setSelectedLine] = useState(null);
   const [aiChatWidth, setAiChatWidth] = useState(350);
 
   const containerRef = useRef(null);
@@ -131,7 +134,28 @@ const IDE = () => {
                 </div>
               </>
             )}
-            {activeTab !== 'explorer' && activeTab !== 'graph' && (
+            {activeTab === 'search' && (
+              <>
+                <div className="pane-header">SEARCH</div>
+                {sandboxId ? (
+                  <SearchPanel onSelectFile={({ path, line }) => {
+                    setSelectedFile(path);
+                    setSelectedLine(line);
+                  }} />
+                ) : (
+                  <div style={{ padding: '16px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>Initializing Workspace...</div>
+                )}
+              </>
+            )}
+            {activeTab === 'db-designer' && (
+              <>
+                <div className="pane-header">DATABASE DESIGNER</div>
+                <div style={{ padding: '16px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                  The Database Designer Hub is open in the main view.
+                </div>
+              </>
+            )}
+            {activeTab !== 'explorer' && activeTab !== 'graph' && activeTab !== 'search' && activeTab !== 'db-designer' && (
               <div className="pane-header">{activeTab.toUpperCase()}</div>
             )}
           </div>
@@ -142,8 +166,10 @@ const IDE = () => {
           <div className="editor-wrapper" style={{ display: isPanelFullscreen ? 'none' : 'flex', flexGrow: 1, minHeight: 0, flexDirection: 'column' }}>
             {activeTab === 'graph' ? (
               <ArchitectureGraph />
+            ) : activeTab === 'db-designer' ? (
+              <DatabaseDesignerHub />
             ) : (
-              <EditorPane selectedFile={selectedFile} />
+              <EditorPane selectedFile={selectedFile} selectedLine={selectedLine} />
             )}
           </div>
           

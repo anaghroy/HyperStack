@@ -1,7 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import { invokeMultiAgent, multiAgentGraph } from "../agents/multiAgentWorkflow.js";
-import { SYSTEM_INSTRUCTION, llamaModel } from "../models/index.js";
+import { SYSTEM_INSTRUCTION, llamaModel, getModel } from "../models/index.js";
 import { ChatHistory } from "../models/chat.model.js";
 import { z } from "zod";
 import { embedCodebase } from "../services/vectorStore.js";
@@ -133,8 +133,57 @@ MIDDLE:`;
 
     return res.status(200).json({ completion: response.content });
   } catch (error) {
-    console.error("Autocomplete error:", error);
-    return res.status(500).json({ error: "Failed to generate autocomplete" });
+    console.error("Autocomplete Error:", error);
+    res.status(500).json({ error: "Autocomplete failed" });
+  }
+});
+
+agentRouter.post("/generate-db-schema", async (req, res) => {
+  try {
+    const { prompt, orm = "mongoose", modelName = "llama" } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({ error: "Prompt is required" });
+    }
+
+    const model = getModel(modelName);
+    const systemPrompt = `You are an expert database architect. The user will provide natural language requirements for a database schema.
+You must output a JSON object with EXACTLY two string properties: "code" and "mermaid".
+- "code": The full, complete, and valid ${orm} code (models/schema).
+- "mermaid": The raw Mermaid ER Diagram syntax string describing the entities and relationships.
+
+Do not include any markdown backticks for the JSON itself, just the raw JSON object.
+Do not add any additional explanation or conversational text.`;
+
+    const userPrompt = `Generate a ${orm} schema and Mermaid ER diagram for the following requirements:\n${prompt}`;
+
+    const response = await model.invoke([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ]);
+
+    let responseText = response.content.trim();
+    // In case the LLM outputs markdown block for JSON, clean it
+    if (responseText.startsWith("```json")) {
+      responseText = responseText.replace(/^```json\n/, "").replace(/\n```$/, "");
+    }
+    
+    let parsedData;
+    try {
+      parsedData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("Failed to parse DB schema JSON:", responseText);
+      return res.status(500).json({ error: "LLM returned invalid JSON" });
+    }
+
+    // Track tokens
+    const tokens = response.tokens || 300;
+    await trackTokenUsage(req.user.id || req.user._id, tokens);
+
+    res.status(200).json(parsedData);
+  } catch (error) {
+    console.error("DB Schema Generator Error:", error);
+    res.status(500).json({ error: error.message || "Failed to generate DB schema" });
   }
 });
 

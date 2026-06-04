@@ -253,6 +253,36 @@ export const readFile = async (filename) => {
   }
 };
 
+export const searchFilesAPI = async (query, isCaseInsensitive = false, isRegex = false) => {
+  try {
+    return await agentFetch(`/search?q=${encodeURIComponent(query)}&isCaseInsensitive=${isCaseInsensitive}&isRegex=${isRegex}`);
+  } catch (error) {
+    console.error('Failed to search files:', error);
+    throw error;
+  }
+};
+
+export const generateDbSchemaAPI = async (prompt, orm) => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/ai/generate-db-schema`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ prompt, orm, modelName: 'llama' })
+    });
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to generate schema (${res.status})`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('generateDbSchemaAPI error:', error);
+    throw error;
+  }
+};
+
 export const updateFile = async (filename, content) => {
   try {
     return await agentFetch('/update-files', {

@@ -280,4 +280,62 @@ app.get("/run-linter", (req, res) => {
   });
 });
 
+/**
+ * @route GET /search
+ * @description Global search across workspace files using grep.
+ */
+app.get("/search", (req, res) => {
+  const { q, isCaseInsensitive, isRegex } = req.query;
+  
+  if (!q) {
+    return res.status(400).json({ error: "Missing query parameter 'q'" });
+  }
+
+  let flags = "-rnI";
+  if (isCaseInsensitive === "true") flags += "i";
+  if (isRegex === "true") flags += "E";
+  else flags += "F"; // Fixed strings (prevents regex injection if not intended)
+
+  // Escape the query slightly if using regex, but JSON.stringify handles quotes safely
+  // For bash, wrapping in single quotes is safer, but JSON.stringify gives double quotes which allows $ interpretation.
+  // Actually, exec uses sh -c by default. Using JSON.stringify is risky if q contains $.
+  // Let's use a safer escaping method for bash:
+  const safeQ = "'" + q.replace(/'/g, "'\\''") + "'";
+
+  const cmd = `grep ${flags} --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist ${safeQ} .`;
+
+  exec(cmd, { cwd: WORKING_DIR, maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
+    // grep exits with code 1 if no matches found. That is not an application error.
+    if (error && error.code !== 1) {
+      console.error("Grep error:", error);
+      return res.status(500).json({ success: false, error: "Search failed" });
+    }
+
+    if (!stdout.trim()) {
+      return res.status(200).json({ success: true, matches: [] });
+    }
+
+    const matches = [];
+    const lines = stdout.split('\n');
+
+    for (const line of lines) {
+      if (!line) continue;
+      // grep -n output format: ./path/to/file:123:content
+      const match = line.match(/^(.+?):(\d+):(.*)$/);
+      if (match) {
+        let filePath = match[1];
+        if (filePath.startsWith("./")) filePath = filePath.substring(2); // Remove leading ./
+        
+        matches.push({
+          file: filePath,
+          line: parseInt(match[2], 10),
+          content: match[3]
+        });
+      }
+    }
+
+    res.status(200).json({ success: true, matches });
+  });
+});
+
 export default httpServer;
