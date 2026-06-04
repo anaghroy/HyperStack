@@ -1,7 +1,9 @@
 import  { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
-import { Box, Copy, Check, Layout, Globe, RefreshCw } from "lucide-react";
+import { Box, Copy, Check, Layout, Globe, RefreshCw, Sparkles } from "lucide-react";
 import { invokeAutocomplete, readFile, updateFile, getSandboxId } from "../../services/api";
+import { useDispatch } from "react-redux";
+import { setAiExplainRequest, setIsAIChatOpen } from "../../redux/slices/projectSlice";
 
 const EditorPane = ({ selectedFile, selectedLine }) => {
   const [activeTab, setActiveTab] = useState(null);
@@ -17,6 +19,10 @@ const EditorPane = ({ selectedFile, selectedLine }) => {
   const [previewUrl, setPreviewUrl] = useState("");
   const [browserUrl, setBrowserUrl] = useState("");
   const iframeRef = useRef(null);
+  
+  const [selectedText, setSelectedText] = useState("");
+  const [selectionPosition, setSelectionPosition] = useState(null);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     const sandboxId = getSandboxId();
@@ -149,6 +155,37 @@ const EditorPane = ({ selectedFile, selectedLine }) => {
       freeInlineCompletions: () => {},
       disposeInlineCompletions: () => {},
     });
+
+    // Listen to cursor selection changes
+    editor.onDidChangeCursorSelection((e) => {
+      const selection = e.selection;
+      const text = editor.getModel().getValueInRange(selection);
+      
+      if (text.trim().length > 0) {
+        setSelectedText(text);
+        
+        // Calculate position for the floating button
+        const position = editor.getScrolledVisiblePosition({
+          lineNumber: selection.endLineNumber,
+          column: selection.endColumn
+        });
+        
+        if (position) {
+          setSelectionPosition({ top: position.top + 30, left: position.left });
+        }
+      } else {
+        setSelectedText("");
+        setSelectionPosition(null);
+      }
+    });
+  };
+
+  const reloadPreview = () => {
+    if (selectedLine && editorRef.current) {
+      editorRef.current.revealLineInCenter(selectedLine);
+      editorRef.current.setPosition({ lineNumber: selectedLine, column: 1 });
+      editorRef.current.focus();
+    }
   };
 
   useEffect(() => {
@@ -215,6 +252,7 @@ const EditorPane = ({ selectedFile, selectedLine }) => {
           ) : fileContents[activeTab] === undefined ? (
             <div className="loading-state">Loading file...</div>
           ) : (
+            <>
             <Editor
               height="100%"
               path={activeTab}
@@ -228,18 +266,51 @@ const EditorPane = ({ selectedFile, selectedLine }) => {
               }}
               options={{
                 minimap: { enabled: false },
-                fontSize: 16,
-                fontFamily: "JetBrains Mono, monospace",
-                lineHeight: 24,
+                fontSize: 14,
+                fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                lineHeight: 1.6,
                 padding: { top: 16 },
                 scrollBeyondLastLine: false,
                 smoothScrolling: true,
                 cursorBlinking: "smooth",
-                cursorSmoothCaretAnimation: "on",
+                cursorSmoothCaretAnimation: true,
                 formatOnPaste: true,
-                inlineSuggest: { enabled: true },
+                suggest: { preview: true },
               }}
             />
+            {selectedText && selectionPosition && (
+              <button
+                onClick={() => {
+                  dispatch(setAiExplainRequest({
+                    code: selectedText,
+                    context: `File: ${activeTab}`
+                  }));
+                  dispatch(setIsAIChatOpen(true));
+                  setSelectedText("");
+                  setSelectionPosition(null);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: `${selectionPosition.top}px`,
+                  left: `${selectionPosition.left}px`,
+                  zIndex: 100,
+                  background: 'var(--color-accent)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                }}
+              >
+                <Sparkles size={12} /> Explain Code
+              </button>
+            )}
+            </>
           )}
         </div>
         

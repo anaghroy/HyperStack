@@ -9,6 +9,8 @@ import SearchPanel from '../explorer/SearchPanel';
 import AIChatPanel from '../panels/AIChatPanel';
 import ArchitectureGraph from '../graph/ArchitectureGraph';
 import DatabaseDesignerHub from '../db-designer/DatabaseDesignerHub';
+import EditorMemoryHub from '../memory/EditorMemoryHub';
+import EditorIntentHub from '../intent/EditorIntentHub';
 import { startSandbox, createProject, sendHeartbeat } from '../../services/api';
 
 import { useNavigate } from 'react-router-dom';
@@ -155,7 +157,23 @@ const IDE = () => {
                 </div>
               </>
             )}
-            {activeTab !== 'explorer' && activeTab !== 'graph' && activeTab !== 'search' && activeTab !== 'db-designer' && (
+            {activeTab === 'memory' && (
+              <>
+                <div className="pane-header">PROJECT DECISION MEMORY</div>
+                <div style={{ padding: '16px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                  The Project Decision Memory is open in the main view.
+                </div>
+              </>
+            )}
+            {activeTab === 'intent' && (
+              <>
+                <div className="pane-header">INTENT-DRIVEN DEVELOPMENT</div>
+                <div style={{ padding: '16px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                  The Intent-Driven Hub is open in the main view.
+                </div>
+              </>
+            )}
+            {activeTab !== 'explorer' && activeTab !== 'graph' && activeTab !== 'search' && activeTab !== 'db-designer' && activeTab !== 'memory' && activeTab !== 'intent' && (
               <div className="pane-header">{activeTab.toUpperCase()}</div>
             )}
           </div>
@@ -168,6 +186,10 @@ const IDE = () => {
               <ArchitectureGraph />
             ) : activeTab === 'db-designer' ? (
               <DatabaseDesignerHub />
+            ) : activeTab === 'memory' ? (
+              <EditorMemoryHub />
+            ) : activeTab === 'intent' ? (
+              <EditorIntentHub />
             ) : (
               <EditorPane selectedFile={selectedFile} selectedLine={selectedLine} />
             )}

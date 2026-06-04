@@ -265,12 +265,7 @@ const Dashboard = () => {
                   onChange={(e) => setNewProjectTitle(e.target.value)}
                   style={{ marginBottom: '10px' }}
                 />
-                <input
-                  type="url"
-                  placeholder="Optional: GitHub Repo URL to clone"
-                  value={newProjectGithub}
-                  onChange={(e) => setNewProjectGithub(e.target.value)}
-                />
+                
                 <div className="actions">
                   <button type="button" className="cancel-btn" onClick={() => setIsCreating(false)}>Cancel</button>
                   <button type="submit" className="submit-btn" disabled={(!newProjectTitle.trim() && !newProjectGithub.trim()) || loading}>

@@ -283,6 +283,102 @@ export const generateDbSchemaAPI = async (prompt, orm) => {
   }
 };
 
+export const getProjectMemoryAPI = async (projectId) => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/ai/memory/${projectId}`, { credentials: 'include' });
+    if (!res.ok) throw new Error("Failed to fetch memory");
+    return await res.json();
+  } catch (error) {
+    console.error('getProjectMemoryAPI error:', error);
+    throw error;
+  }
+};
+
+export const addProjectMemoryAPI = async (projectId, title, context) => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/ai/memory`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ projectId, title, context })
+    });
+    if (!res.ok) throw new Error("Failed to save memory");
+    return await res.json();
+  } catch (error) {
+    console.error('addProjectMemoryAPI error:', error);
+    throw error;
+  }
+};
+
+export const queryProjectMemoryAPI = async (projectId, query) => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/ai/memory/query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ projectId, query, modelName: 'llama' })
+    });
+    if (!res.ok) throw new Error("Failed to query memory");
+    return await res.json();
+  } catch (error) {
+    console.error('queryProjectMemoryAPI error:', error);
+    throw error;
+  }
+};
+
+export const generateIntentAPI = async (intent) => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/ai/intent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ intent, modelName: 'llama' })
+    });
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to generate code from intent (${res.status})`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('generateIntentAPI error:', error);
+    throw error;
+  }
+};
+
+export const explainCodeAPI = async (code, context) => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/ai/explain-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ code, context, modelName: 'llama' })
+    });
+    if (!res.ok) throw new Error("Failed to explain code");
+    return await res.json();
+  } catch (error) {
+    console.error('explainCodeAPI error:', error);
+    throw error;
+  }
+};
+
+export const explainFileAPI = async (filePath, fileContent) => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/ai/explain-file`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ filePath, fileContent, modelName: 'llama' })
+    });
+    if (!res.ok) throw new Error("Failed to explain file");
+    return await res.json();
+  } catch (error) {
+    console.error('explainFileAPI error:', error);
+    throw error;
+  }
+};
+
 export const updateFile = async (filename, content) => {
   try {
     return await agentFetch('/update-files', {

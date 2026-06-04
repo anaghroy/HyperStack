@@ -11,8 +11,9 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import dagre from 'dagre';
-import { getArchitectureGraph, listFiles, readFile } from '../../services/api';
+import { getArchitectureGraph, listFiles, readFile, explainFileAPI } from '../../services/api';
 import CustomNode from './CustomNode';
+import { X, FileText, Sparkles } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -61,6 +62,11 @@ const ArchitectureGraph = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
+
+  // Explain File State
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [fileExplanation, setFileExplanation] = useState('');
+  const [isExplaining, setIsExplaining] = useState(false);
 
   const fetchGraph = async () => {
     setLoading(true);
@@ -166,6 +172,29 @@ const ArchitectureGraph = () => {
     [nodes, edges]
   );
 
+  const handleNodeClick = async (event, node) => {
+    setSelectedNode(node);
+    setIsExplaining(true);
+    setFileExplanation('');
+    
+    try {
+      // Fetch full file content
+      const data = await readFile(node.id);
+      let content = '';
+      if (data && data.files && data.files.length > 0) {
+        content = data.files[0][node.id.startsWith('/') ? node.id : '/' + node.id] || data.files[0][node.id] || "";
+      }
+      
+      const res = await explainFileAPI(node.id, content);
+      setFileExplanation(res.explanation);
+    } catch (error) {
+      console.error("Failed to explain file:", error);
+      setFileExplanation("Failed to generate explanation. Please try again.");
+    } finally {
+      setIsExplaining(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--text-secondary)' }}>
@@ -200,6 +229,7 @@ const ArchitectureGraph = () => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeClick={handleNodeClick}
         connectionLineType={ConnectionLineType.SmoothStep}
         colorMode="dark"
         fitView
@@ -217,6 +247,63 @@ const ArchitectureGraph = () => {
           style={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '8px' }}
         />
       </ReactFlow>
+
+      {/* Explain File Side Panel */}
+      {selectedNode && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: '400px',
+          height: '100%',
+          backgroundColor: '#111111',
+          borderLeft: '1px solid #333',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 1000,
+          boxShadow: '-4px 0 15px rgba(0,0,0,0.8)',
+          animation: 'slideInRight 0.3s ease-out'
+        }}>
+          <div style={{ padding: '16px', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#1a1a1a' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileText size={16} color="#4a90e2" />
+              <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#fff', wordBreak: 'break-all' }}>
+                {selectedNode.data.label}
+              </h3>
+            </div>
+            <X size={18} style={{ cursor: 'pointer', color: '#888' }} onClick={() => setSelectedNode(null)} />
+          </div>
+          
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <Sparkles size={16} color="#10b981" />
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#10b981' }}>AI Explanation</span>
+            </div>
+            
+            {isExplaining ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', marginTop: '40px', color: '#888' }}>
+                <div className="spinner" style={{ width: '20px', height: '20px', border: '2px solid #333', borderTopColor: '#10b981', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                <span style={{ fontSize: '13px' }}>Analyzing file architecture...</span>
+              </div>
+            ) : (
+              <div style={{ 
+                fontSize: '13px', 
+                color: '#ddd', 
+                lineHeight: 1.6, 
+                whiteSpace: 'pre-wrap' 
+              }}>
+                {fileExplanation}
+              </div>
+            )}
+          </div>
+          <style>{`
+            @keyframes slideInRight {
+              from { transform: translateX(100%); }
+              to { transform: translateX(0); }
+            }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 };

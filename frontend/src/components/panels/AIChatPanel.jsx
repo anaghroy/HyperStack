@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Sparkles } from 'lucide-react';
-import { invokeAI, getSandboxId } from '../../services/api';
+import { invokeAI, getSandboxId, explainCodeAPI } from '../../services/api';
 import { useSelector, useDispatch } from 'react-redux';
-import { setAiInitialMessage } from '../../redux/slices/projectSlice';
+import { setAiInitialMessage, setAiExplainRequest } from '../../redux/slices/projectSlice';
 
 const AIChatPanel = ({ onClose, width }) => {
   const [messages, setMessages] = useState([
@@ -13,7 +13,7 @@ const AIChatPanel = ({ onClose, width }) => {
   const chatEndRef = useRef(null);
   
   const dispatch = useDispatch();
-  const { aiInitialMessage } = useSelector((state) => state.project);
+  const { aiInitialMessage, aiExplainRequest } = useSelector((state) => state.project);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -96,6 +96,35 @@ const AIChatPanel = ({ onClose, width }) => {
     }
   };
 
+  const handleExplain = async (code, context) => {
+    if (isGenerating) return;
+    const userMsg = `Explain this code:\n\`\`\`javascript\n${code}\n\`\`\``;
+    setMessages(prev => [...prev, { role: 'user', content: userMsg }, { role: 'ai', content: '' }]);
+    setIsGenerating(true);
+
+    try {
+      const res = await explainCodeAPI(code, context);
+      setMessages(prev => {
+        const newMessages = [...prev];
+        const lastIndex = newMessages.length - 1;
+        newMessages[lastIndex] = {
+          ...newMessages[lastIndex],
+          content: res.explanation
+        };
+        return newMessages;
+      });
+    } catch (error) {
+      console.error("Explain error:", error);
+      setMessages(prev => {
+        const newMessages = [...prev];
+        newMessages[newMessages.length - 1].content = "[Error generating explanation]";
+        return newMessages;
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -110,6 +139,14 @@ const AIChatPanel = ({ onClose, width }) => {
       handleSend(msg);
     }
   }, [aiInitialMessage]);
+
+  useEffect(() => {
+    if (aiExplainRequest) {
+      const req = aiExplainRequest;
+      dispatch(setAiExplainRequest(null)); // Clear it immediately
+      handleExplain(req.code, req.context);
+    }
+  }, [aiExplainRequest]);
 
   return (
     <div className="ai-chat-panel" style={{ width: `${width}px` }}>

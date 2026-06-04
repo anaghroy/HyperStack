@@ -5,6 +5,7 @@ const initialState = {
   sandboxId: null,
   isAIChatOpen: false,
   aiInitialMessage: null,
+  aiExplainRequest: null,
 };
 
 const projectSlice = createSlice({
@@ -23,6 +24,9 @@ const projectSlice = createSlice({
     setAiInitialMessage: (state, action) => {
       state.aiInitialMessage = action.payload;
     },
+    setAiExplainRequest: (state, action) => {
+      state.aiExplainRequest = action.payload;
+    },
   },
 });
 
@@ -30,7 +34,8 @@ export const {
   setActiveProject, 
   setSandboxId, 
   setIsAIChatOpen, 
-  setAiInitialMessage 
+  setAiInitialMessage,
+  setAiExplainRequest
 } = projectSlice.actions;
 
 export default projectSlice.reducer;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Files, Search, GitBranch, Settings, LayoutGrid, Network, UserPlus, Database } from 'lucide-react';
+import { Files, Search, GitBranch, Settings, LayoutGrid, Network, UserPlus, Database, Lightbulb, Wand } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import ShareProjectModal from '../modals/ShareProjectModal';
 
@@ -28,6 +28,12 @@ const Sidebar = ({ children, activeTab, setActiveTab }) => {
           </div>
           <div className={`activity-icon ${activeTab === 'db-designer' ? 'active' : ''}`} onClick={() => setActiveTab('db-designer')} title="Database Designer">
             <Database size={24} strokeWidth={1.5} />
+          </div>
+          <div className={`activity-icon ${activeTab === 'memory' ? 'active' : ''}`} onClick={() => setActiveTab('memory')} title="Project Decision Memory">
+            <Lightbulb size={24} strokeWidth={1.5} />
+          </div>
+          <div className={`activity-icon ${activeTab === 'intent' ? 'active' : ''}`} onClick={() => setActiveTab('intent')} title="Intent-Driven Development">
+            <Wand size={24} strokeWidth={1.5} />
           </div>
         </div>
         <div className="activity-bottom">

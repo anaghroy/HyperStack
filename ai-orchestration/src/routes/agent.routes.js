@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { invokeMultiAgent, multiAgentGraph } from "../agents/multiAgentWorkflow.js";
 import { SYSTEM_INSTRUCTION, llamaModel, getModel } from "../models/index.js";
 import { ChatHistory } from "../models/chat.model.js";
+import { ProjectMemory } from "../models/memory.model.js";
 import { z } from "zod";
 import { embedCodebase } from "../services/vectorStore.js";
 import { runAutoFixer } from "../agents/autoFixer.agent.js";
@@ -140,7 +141,7 @@ MIDDLE:`;
 
 agentRouter.post("/generate-db-schema", async (req, res) => {
   try {
-    const { prompt, orm = "mongoose", modelName = "llama" } = req.body;
+    const { prompt, orm = "mongoose", modelName = "kimi" } = req.body;
     
     if (!prompt) {
       return res.status(400).json({ error: "Prompt is required" });
@@ -184,6 +185,173 @@ Do not add any additional explanation or conversational text.`;
   } catch (error) {
     console.error("DB Schema Generator Error:", error);
     res.status(500).json({ error: error.message || "Failed to generate DB schema" });
+  }
+});
+
+// Memory Routes
+agentRouter.get("/memory/:projectId", async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const memories = await ProjectMemory.find({ projectId }).sort({ createdAt: -1 });
+    res.status(200).json(memories);
+  } catch (error) {
+    console.error("Fetch memory error:", error);
+    res.status(500).json({ error: "Failed to fetch project memory" });
+  }
+});
+
+agentRouter.post("/memory", async (req, res) => {
+  try {
+    const { projectId, title, context } = req.body;
+    if (!projectId || !title || !context) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    
+    const newMemory = await ProjectMemory.create({ projectId, title, context });
+    res.status(201).json(newMemory);
+  } catch (error) {
+    console.error("Save memory error:", error);
+    res.status(500).json({ error: "Failed to save memory" });
+  }
+});
+
+agentRouter.post("/memory/query", async (req, res) => {
+  try {
+    const { projectId, query, modelName = "llama" } = req.body;
+    
+    if (!projectId || !query) {
+      return res.status(400).json({ error: "projectId and query are required" });
+    }
+
+    // Retrieve all past decisions for this project
+    const memories = await ProjectMemory.find({ projectId }).sort({ createdAt: 1 });
+    const memoryContext = memories.map(m => `Title: ${m.title}\nDecision: ${m.context}`).join("\n\n");
+
+    const systemPrompt = `You are the lead architect and memory assistant for this codebase.
+You have access to the following logged architectural decisions for this project:
+---
+${memoryContext || "No architectural decisions recorded yet."}
+---
+Answer the user's question based strictly on the provided context if it relates to past decisions. If the context does not contain the answer, acknowledge that it was not recorded, but provide a highly educated guess on why such a decision might have been made based on general software engineering best practices. Be concise and professional.`;
+
+    const model = getModel(modelName);
+    const response = await model.invoke([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: query }
+    ]);
+
+    // Track tokens
+    const tokens = response.tokens || 150;
+    await trackTokenUsage(req.user.id || req.user._id, tokens);
+
+    res.status(200).json({ answer: response.content });
+  } catch (error) {
+    console.error("Query memory error:", error);
+    res.status(500).json({ error: "Failed to query project memory" });
+  }
+});
+
+// Intent-Driven Development Route
+agentRouter.post("/intent", async (req, res) => {
+  try {
+    const { intent, modelName = "kimi" } = req.body;
+    
+    if (!intent) {
+      return res.status(400).json({ error: "Intent is required" });
+    }
+
+    const systemPrompt = `You are an expert full-stack developer. The user will describe a feature or component they want to build in plain English.
+Your job is to generate ONLY the production-ready code that satisfies the user's intent.
+CRITICAL INSTRUCTIONS:
+- Return ONLY the raw code.
+- Do NOT wrap the code in markdown formatting (like \`\`\`javascript or \`\`\`).
+- Do NOT include any explanations, imports that don't belong in the file, or conversational text.
+- If the user asks for a React component, return the complete, valid JSX file.
+- If the user asks for an Express middleware, return the complete module.
+- The output will be directly written into a source code file.`;
+
+    const model = getModel(modelName);
+    const response = await model.invoke([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: intent }
+    ]);
+
+    let generatedCode = response.content.trim();
+    
+    // Fallback: Strip markdown backticks if the model ignores the instruction
+    if (generatedCode.startsWith('```')) {
+      generatedCode = generatedCode.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '');
+    }
+
+    // Track tokens
+    const tokens = response.tokens || 150;
+    await trackTokenUsage(req.user.id || req.user._id, tokens);
+
+    res.status(200).json({ code: generatedCode });
+  } catch (error) {
+    console.error("Intent generation error:", error);
+    res.status(500).json({ error: "Failed to generate code from intent" });
+  }
+});
+
+// Explain AI Routes
+agentRouter.post("/explain-code", async (req, res) => {
+  try {
+    const { code, context, modelName = "llama" } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({ error: "Code is required" });
+    }
+
+    const systemPrompt = `You are an expert developer. The user will provide a snippet of code, and possibly the surrounding file context.
+Your job is to provide a plain-English, line-by-line breakdown of what the highlighted code does.
+Be concise but educational. Assume the user is a developer trying to understand complex logic.`;
+
+    const userMessage = `Context (Optional):\n${context || 'None'}\n\nHighlighted Code:\n${code}\n\nPlease explain this code.`;
+
+    const model = getModel(modelName);
+    const response = await model.invoke([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userMessage }
+    ]);
+
+    const tokens = response.tokens || 100;
+    await trackTokenUsage(req.user.id || req.user._id, tokens);
+
+    res.status(200).json({ explanation: response.content });
+  } catch (error) {
+    console.error("Explain code error:", error);
+    res.status(500).json({ error: "Failed to explain code" });
+  }
+});
+
+agentRouter.post("/explain-file", async (req, res) => {
+  try {
+    const { filePath, fileContent, modelName = "llama" } = req.body;
+    
+    if (!filePath || !fileContent) {
+      return res.status(400).json({ error: "filePath and fileContent are required" });
+    }
+
+    const systemPrompt = `You are a Lead Software Architect. The user is asking you to explain a specific file in the codebase.
+Analyze the provided file content and provide a high-level summary of its purpose, logic, and how it fits into the overall architecture.
+Use markdown for formatting. Keep it structured and easy to read.`;
+
+    const userMessage = `File: ${filePath}\n\nContent:\n${fileContent}\n\nPlease explain this file's architecture and logic.`;
+
+    const model = getModel(modelName);
+    const response = await model.invoke([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userMessage }
+    ]);
+
+    const tokens = response.tokens || 200;
+    await trackTokenUsage(req.user.id || req.user._id, tokens);
+
+    res.status(200).json({ explanation: response.content });
+  } catch (error) {
+    console.error("Explain file error:", error);
+    res.status(500).json({ error: "Failed to explain file" });
   }
 });
 
