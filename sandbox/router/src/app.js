@@ -3,8 +3,7 @@ import morgan from "morgan";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { createProxyServer } from "httpxy";
 import http from "http";
-import {refreshTTL} from "../config/redis.js";
-import { text } from "stream/consumers";
+import { refreshTTL, getPodIp } from "../config/redis.js";
 
 const app = express();
 app.use(morgan("combined"));
@@ -16,29 +15,29 @@ app.get("/api/status/readyz", (req, res) =>
   res.status(200).json({ status: "ready" }),
 );
 
-const proxies = {};
-const agentProxies = {};
+// Single dynamic HTTP proxy for all sandboxes
+const dynamicProxy = createProxyMiddleware({
+  target: "http://127.0.0.1:9999", // Fallback target
+  changeOrigin: true,
+  router: async (req) => {
+    const host = req.headers.host;
+    if (!host) return "http://127.0.0.1:9999";
 
-function getProxy(sandboxId) {
-  const target = `http://sandbox-service-${sandboxId}`;
-  if (!proxies[sandboxId]) {
-    proxies[sandboxId] = createProxyMiddleware({
-      target
-    });
-  }
-  return proxies[sandboxId];
-}
+    const parts = host.split(".");
+    const sandboxId = parts[0];
+    const type = parts[1];
 
-function getAgentProxy(sandboxId) {
-  const target = `http://sandbox-service-${sandboxId}:3000`;
-  if (!agentProxies[sandboxId]) {
-    agentProxies[sandboxId] = createProxyMiddleware({
-      target,
-      changeOrigin: true,
-    });
-  }
-  return agentProxies[sandboxId];
-}
+    const podIp = await getPodIp(sandboxId);
+    if (!podIp) return "http://127.0.0.1:9999"; // Pod not found or expired
+
+    if (type === "agent") {
+      return `http://${podIp}:3000`;
+    } else if (type === "preview") {
+      return `http://${podIp}:5173`;
+    }
+    return "http://127.0.0.1:9999";
+  },
+});
 
 // Single httpxy proxy server for all WebsSocket upgrade
 const wsProxy = createProxyServer({ changeOrigin: true });
@@ -49,21 +48,18 @@ wsProxy.on("error", (err, req, socket) => {
 
 app.use(async (req, res, next) => {
   const host = req.headers.host;
-  const sandboxId = host.split(".")[0];
+  if (!host) return next();
 
+  const sandboxId = host.split(".")[0];
   await refreshTTL(sandboxId); // Refresh TTL on each request
 
-  if (host.split(".")[1] === "agent") {
-    return getAgentProxy(sandboxId)(req, res, next);
-  } else if (host.split(".")[1] === "preview") {
-    return getProxy(sandboxId)(req, res, next);
-  }
+  return dynamicProxy(req, res, next);
 });
 
 //Create the HTTP server explicitly
 const server = http.createServer(app);
 
-server.on("upgrade", (req, socket, head) => {
+server.on("upgrade", async (req, socket, head) => {
   const host = req.headers.host;
   if (!host) {
     socket.destroy();
@@ -77,22 +73,23 @@ server.on("upgrade", (req, socket, head) => {
   const sandboxId = host.split(".")[0];
   const type = host.split(".")[1];
 
+  const podIp = await getPodIp(sandboxId);
+  if (!podIp) {
+    socket.destroy();
+    return;
+  }
+
   console.log(
     `WS upgrade request: ${host}, sandboxId: ${sandboxId}, type: ${type}`,
   );
 
   if (type === "agent") {
     wsProxy
-      .ws(
-        req,
-        socket,
-        { target: `http://sandbox-service-${sandboxId}:3000` },
-        head,
-      )
+      .ws(req, socket, { target: `http://${podIp}:3000` }, head)
       .catch(() => socket.destroy());
   } else if (type === "preview") {
     wsProxy
-      .ws(req, socket, { target: `http://sandbox-service-${sandboxId}` }, head)
+      .ws(req, socket, { target: `http://${podIp}:5173` }, head)
       .catch(() => socket.destroy());
   } else {
     socket.destroy();

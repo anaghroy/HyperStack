@@ -79,7 +79,7 @@ export const updateFiles = tool(
             content: z
               .string()
               .describe(
-                "The new content for the file, the content should support json format.",
+                "The exact raw text content to write to the file. Do NOT wrap this in extra JSON, stringify it, or escape it unnecessarily. Just provide the pure source code or text.",
               ),
           }),
         )

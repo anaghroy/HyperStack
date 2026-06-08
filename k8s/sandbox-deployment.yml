@@ -62,6 +62,12 @@ spec:
                 secretKeyRef:
                   name: app-secret
                   key: SANDBOX_MONGO_URI
+            
+            - name: AGENT_IMAGE
+              value: agent
+
+            - name: TEMPLATE_IMAGE
+              value: template
           ports:
             - containerPort: 3000
               name: main-sandbox

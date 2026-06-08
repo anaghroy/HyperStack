@@ -1,6 +1,5 @@
 import express from "express";
 import { createPod } from "../kubernetes/pod.js";
-import { createService } from "../kubernetes/service.js";
 import { v7 as uuid } from "uuid";
 import { createSandboxKey, refreshSandboxKey } from "../config/redis.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
@@ -51,11 +50,11 @@ router.post("/start", authMiddleware, async (req, res) => {
 
     const sandboxId = uuid();
 
-    await Promise.all([
-      createPod(sandboxId, project.githubUrl), // Create pod with githubUrl if present
-      createService(sandboxId), // Create service
-      createSandboxKey(sandboxId), // Create sandbox key in Redis
-    ]);
+    // Create pod and wait for IP
+    const { podIp } = await createPod(sandboxId, project.githubUrl);
+
+    // Save mapping to Redis
+    await createSandboxKey(sandboxId, podIp);
 
     // Dispatch real-time notification
     await sendNotification({

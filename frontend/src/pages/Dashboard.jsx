@@ -32,6 +32,7 @@ const Dashboard = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectTitle, setNewProjectTitle] = useState('');
   const [newProjectGithub, setNewProjectGithub] = useState('');
+  const [newProjectDescription, setNewProjectDescription] = useState('');
 
   // Edit project modal state
   const [editingProject, setEditingProject] = useState(null);
@@ -96,6 +97,7 @@ const Dashboard = () => {
         setProjects([...projects, data.project]);
         setNewProjectTitle('');
         setNewProjectGithub('');
+        setNewProjectDescription('');
         setIsCreating(false);
       }
     } catch (error) {
@@ -253,29 +255,6 @@ const Dashboard = () => {
             )}
           </div>
 
-          {isCreating && (
-            <div className="create-project-card">
-              <h3>Create a new project</h3>
-              <form onSubmit={handleCreateProject}>
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="Project Name (e.g. My Next.js App)"
-                  value={newProjectTitle}
-                  onChange={(e) => setNewProjectTitle(e.target.value)}
-                  style={{ marginBottom: '10px' }}
-                />
-                
-                <div className="actions">
-                  <button type="button" className="cancel-btn" onClick={() => setIsCreating(false)}>Cancel</button>
-                  <button type="submit" className="submit-btn" disabled={(!newProjectTitle.trim() && !newProjectGithub.trim()) || loading}>
-                    {loading ? <Loader2 size={16} className="spin" /> : 'Create'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
           <div className="projects-grid">
             {loading && !isCreating && currentList.length === 0 ? (
               <div className="loading-state">
@@ -384,6 +363,45 @@ const Dashboard = () => {
               <div className="modal-footer">
                 <button type="button" className="cancel-btn" onClick={() => setEditingProject(null)}>Cancel</button>
                 <button type="submit" className="save-btn" disabled={!editTitle.trim()}>Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isCreating && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Create Project</h3>
+              <button className="close-btn" onClick={() => setIsCreating(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateProject}>
+              <div className="form-group">
+                <label>PROJECT NAME</label>
+                <input 
+                  type="text" 
+                  value={newProjectTitle}
+                  onChange={(e) => setNewProjectTitle(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="form-group">
+                <label>DESCRIPTION (OPTIONAL)</label>
+                <textarea 
+                  value={newProjectDescription}
+                  onChange={(e) => setNewProjectDescription(e.target.value)}
+                  placeholder="An AI-powered application that gives the power to access..."
+                  rows={4}
+                />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="cancel-btn" onClick={() => setIsCreating(false)}>Cancel</button>
+                <button type="submit" className="save-btn" disabled={(!newProjectTitle.trim() && !newProjectGithub.trim()) || loading}>
+                  {loading ? <Loader2 size={16} className="spin" /> : 'Create Project'}
+                </button>
               </div>
             </form>
           </div>

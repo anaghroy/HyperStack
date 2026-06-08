@@ -7,9 +7,18 @@ import { Server } from "socket.io";
 import pty from "node-pty";
 import os from "os";
 import cors from "cors";
-import { exec } from "child_process";
+import { exec, execFile } from "child_process";
 
 const WORKING_DIR = "/workspace"; // This is the directory where all the project files will be stored
+
+function getSafePath(relativePath) {
+  // Prevent Path Traversal
+  const resolvedPath = path.resolve(WORKING_DIR, relativePath);
+  if (!resolvedPath.startsWith(WORKING_DIR)) {
+    throw new Error("Path traversal detected: Access to paths outside /workspace is forbidden.");
+  }
+  return resolvedPath;
+}
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -139,7 +148,14 @@ app.get("/read-files", async (req, res) => {
 
   const results = await Promise.all(
     fileList.map(async (file) => {
-      const filePath = path.join(WORKING_DIR, file);
+      let filePath;
+      try {
+        filePath = getSafePath(file);
+      } catch (err) {
+        return {
+          [file]: `Error: ${err.message}`,
+        };
+      }
       try {
         const content = await fs.promises.readFile(filePath, "utf-8");
         return {
@@ -178,7 +194,14 @@ app.patch("/update-files", async (req, res) => {
   const results = await Promise.all(
     updates.map(async (update) => {
       const { file, content } = update;
-      const filePath = path.join(WORKING_DIR, file);
+      let filePath;
+      try {
+        filePath = getSafePath(file);
+      } catch (err) {
+        return {
+          [file]: `Error: ${err.message}`,
+        };
+      }
       try {
         console.log(path.dirname(filePath), filePath);
 
@@ -221,7 +244,14 @@ app.post("/create-files", async (req, res) => {
   const results = await Promise.all(
     files.map(async (fileObj) => {
       const { file, content } = fileObj;
-      const filePath = path.join(WORKING_DIR, file);
+      let filePath;
+      try {
+        filePath = getSafePath(file);
+      } catch (err) {
+        return {
+          [file]: `Error: ${err.message}`,
+        };
+      }
       try {
         await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
         await fs.promises.writeFile(filePath, content, "utf-8");
@@ -255,7 +285,7 @@ app.delete("/delete-item", async (req, res) => {
   }
 
   try {
-    const fullPath = path.join(WORKING_DIR, itemPath);
+    const fullPath = getSafePath(itemPath);
     await fs.promises.rm(fullPath, { recursive: true, force: true });
     io.emit("file-system-changed");
     res.status(200).json({ message: "Item deleted successfully" });
@@ -281,6 +311,47 @@ app.get("/run-linter", (req, res) => {
 });
 
 /**
+ * @route GET /git-info
+ * @description Runs git status and git diff in the sandbox and returns the output.
+ */
+app.get("/git-info", (req, res) => {
+  // First, check if it's a git repo. If not, initialize it with a dummy commit so diffs work.
+  const initScript = `
+    if [ ! -d ".git" ]; then
+      git init
+      git config user.email "ai@hyperstack.local"
+      git config user.name "HyperStack AI"
+      git add .
+      git commit -m "Initial commit"
+    fi
+  `;
+
+  exec(initScript, { cwd: WORKING_DIR }, (initErr) => {
+    if (initErr) {
+      console.error("Git init error:", initErr);
+      // Proceed anyway, might just be a permissions thing, but git status will likely fail
+    }
+
+    // Now run status and diff. We capture both staged and unstaged.
+    const cmd = `git status && echo "--- DIFF ---" && git diff HEAD`;
+    exec(cmd, { cwd: WORKING_DIR, maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
+      if (error && stdout.length === 0) {
+        // Fallback if HEAD doesn't exist or something else went wrong
+        const fallbackCmd = `git status && echo "--- DIFF ---" && git diff`;
+        exec(fallbackCmd, { cwd: WORKING_DIR, maxBuffer: 1024 * 1024 * 10 }, (err2, out2, errStr2) => {
+          if (err2 && out2.length === 0) {
+             return res.status(500).json({ success: false, error: "Failed to run git info", raw: errStr2 });
+          }
+          res.status(200).json({ success: true, info: out2 });
+        });
+        return;
+      }
+      res.status(200).json({ success: true, info: stdout });
+    });
+  });
+});
+
+/**
  * @route GET /search
  * @description Global search across workspace files using grep.
  */
@@ -296,15 +367,9 @@ app.get("/search", (req, res) => {
   if (isRegex === "true") flags += "E";
   else flags += "F"; // Fixed strings (prevents regex injection if not intended)
 
-  // Escape the query slightly if using regex, but JSON.stringify handles quotes safely
-  // For bash, wrapping in single quotes is safer, but JSON.stringify gives double quotes which allows $ interpretation.
-  // Actually, exec uses sh -c by default. Using JSON.stringify is risky if q contains $.
-  // Let's use a safer escaping method for bash:
-  const safeQ = "'" + q.replace(/'/g, "'\\''") + "'";
+  const args = [flags, "--exclude-dir=node_modules", "--exclude-dir=.git", "--exclude-dir=dist", q, "."];
 
-  const cmd = `grep ${flags} --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist ${safeQ} .`;
-
-  exec(cmd, { cwd: WORKING_DIR, maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
+  execFile("grep", args, { cwd: WORKING_DIR, maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
     // grep exits with code 1 if no matches found. That is not an application error.
     if (error && error.code !== 1) {
       console.error("Grep error:", error);

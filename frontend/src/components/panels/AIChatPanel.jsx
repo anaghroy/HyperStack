@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Send, Sparkles } from 'lucide-react';
 import { invokeAI, getSandboxId, explainCodeAPI } from '../../services/api';
 import { useSelector, useDispatch } from 'react-redux';

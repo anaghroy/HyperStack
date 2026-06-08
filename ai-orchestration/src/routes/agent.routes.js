@@ -355,6 +355,52 @@ Use markdown for formatting. Keep it structured and easy to read.`;
   }
 });
 
+// Generate Docs Route
+agentRouter.post("/generate-docs", async (req, res) => {
+  try {
+    const { code, format = "swagger", modelName = "llama" } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({ error: "Router code is required" });
+    }
+
+    let systemPrompt = `You are an expert API documentation writer. The user will provide the raw code of an Express router or API file.
+Your job is to analyze the file and output comprehensive API documentation.`;
+
+    if (format === "swagger") {
+      systemPrompt += `\nOutput a valid OpenAPI/Swagger YAML specification for all the endpoints found in the file.
+Include paths, HTTP methods, parameters, request bodies, and typical responses.
+Return ONLY the raw YAML code. Do not wrap it in markdown backticks.`;
+    } else {
+      systemPrompt += `\nOutput a clean, structured Markdown README documenting all the endpoints found in the file.
+Include the route path, HTTP method, description, required body/query parameters, and response examples.
+Return ONLY the Markdown content. Do not wrap the entire response in markdown backticks unless strictly necessary.`;
+    }
+
+    const model = getModel(modelName);
+    const response = await model.invoke([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Here is the API router code:\n\n${code}` }
+    ]);
+
+    let generatedDocs = response.content.trim();
+    
+    // Fallback: Strip markdown backticks if the model ignores the instruction for YAML
+    if (format === "swagger" && generatedDocs.startsWith('```')) {
+      generatedDocs = generatedDocs.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '');
+    }
+
+    // Track tokens
+    const tokens = response.tokens || 200;
+    await trackTokenUsage(req.user.id || req.user._id, tokens);
+
+    res.status(200).json({ docs: generatedDocs });
+  } catch (error) {
+    console.error("Generate docs error:", error);
+    res.status(500).json({ error: "Failed to generate documentation" });
+  }
+});
+
 agentRouter.post("/architecture", async (req, res) => {
   try {
     const { files } = req.body;
@@ -435,6 +481,95 @@ agentRouter.post("/auto-fix", async (req, res) => {
   } catch (error) {
     console.error("Auto-fix error:", error);
     return res.status(500).json({ error: "Failed to run auto-fixer" });
+  }
+});
+
+agentRouter.post("/generate-tests", async (req, res) => {
+  try {
+    const { code, fileName, framework } = req.body;
+    if (!code || !fileName) {
+      return res.status(400).json({ error: "code and fileName are required" });
+    }
+
+    const testFramework = framework || "jest";
+
+    const systemPrompt = `You are an expert Software Test Engineer. Your task is to write a comprehensive, robust, and production-ready unit test suite for the provided code using ${testFramework}.
+Focus on:
+1. Covering both success and edge cases.
+2. Mocking necessary external dependencies.
+3. Clean and maintainable test code.
+Do not include any conversational text. Return ONLY the raw test code. If you must use backticks, make sure the entire response is valid code.`;
+
+    const modelName = req.body.modelName || "kimi";
+    const model = getModel(modelName);
+
+    const response = await model.invoke([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `File: ${fileName}\n\nCode:\n${code}` }
+    ]);
+
+    let generatedTests = response.content.trim();
+    
+    // Strip markdown formatting if present
+    if (generatedTests.startsWith('\`\`\`')) {
+      generatedTests = generatedTests.replace(/^\`\`\`[a-z]*\n/, '').replace(/\n\`\`\`$/, '');
+    }
+
+    const tokens = response.tokens || 300;
+    await trackTokenUsage(req.user.id || req.user._id, tokens);
+
+    res.status(200).json({ tests: generatedTests });
+  } catch (error) {
+    console.error("Generate tests error:", error);
+    res.status(500).json({ error: "Failed to generate tests" });
+  }
+});
+
+agentRouter.post("/commit", async (req, res) => {
+  try {
+    const { gitInfo, type } = req.body;
+    if (!gitInfo) {
+      return res.status(400).json({ error: "gitInfo is required" });
+    }
+
+    const isPR = type === 'pr';
+    const systemPrompt = isPR 
+      ? `You are an expert developer. Based on the provided git status and git diff, write a comprehensive Pull Request Summary in Markdown.
+Include:
+- A clear PR Title
+- A summary of what was changed and why
+- A bulleted list of specific file changes
+Do not include conversational text, just the Markdown output.`
+      : `You are an expert developer. Based on the provided git status and git diff, write a conventional commit message.
+Format:
+<type>(<optional scope>): <description>
+
+[optional body explaining *why* the change was made]
+
+Do not include conversational text, just the raw commit message text.`;
+
+    const modelName = req.body.modelName || "kimi";
+    const model = getModel(modelName);
+
+    const response = await model.invoke([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Git Info:\n\n${gitInfo}` }
+    ]);
+
+    let generatedText = response.content.trim();
+    
+    // Strip markdown formatting if present and it's a commit message
+    if (!isPR && generatedText.startsWith('\`\`\`')) {
+      generatedText = generatedText.replace(/^\`\`\`[a-z]*\n/, '').replace(/\n\`\`\`$/, '');
+    }
+
+    const tokens = response.tokens || 150;
+    await trackTokenUsage(req.user.id || req.user._id, tokens);
+
+    res.status(200).json({ text: generatedText });
+  } catch (error) {
+    console.error("Generate commit/PR error:", error);
+    res.status(500).json({ error: "Failed to generate text" });
   }
 });
 

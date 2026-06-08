@@ -143,7 +143,7 @@ const FileTree = ({ onSelectFile }) => {
     }
   }, [creatingMode]);
 
-  if (loading) return <div className="tree-loading">Loading workspace...</div>;
+  if (loading) return <div className="tree-loading" style={{ padding: '16px' }}>Loading workspace...</div>;
 
   const handleCreateFile = () => {
     setCreatingMode('file');

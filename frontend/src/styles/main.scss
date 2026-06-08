@@ -11,10 +11,12 @@
 @use "./components/ArchitectureGraph";
 @use "./components/auth";
 @use "./components/header";
+@use "./components/SourceControl";
+@use "./components/ApiDocsHub";
+@use "./components/TestHub";
 
 /*pages*/
 @use "./pages/dashboard";
 @use "./pages/settings";
 @use "./pages/accountSettings";
 @use "./pages/connectRepo";
-

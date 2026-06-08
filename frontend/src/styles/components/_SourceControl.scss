@@ -1,0 +1,201 @@
+.source-control-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+
+  .panel-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--color-border);
+    
+    h2 {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: var(--color-text-secondary);
+    }
+
+    .refresh-btn {
+      background: none;
+      border: none;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        background-color: var(--color-bg-secondary);
+        color: var(--color-text-primary);
+      }
+
+      .spinning {
+        animation: spin 1s linear infinite;
+      }
+    }
+  }
+
+  .sc-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--color-border);
+
+    .sc-section-title {
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+      color: var(--color-text-primary);
+    }
+
+    .sc-status-box {
+      background-color: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      padding: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+
+      pre {
+        margin: 0;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        white-space: pre-wrap;
+        color: #e6edf7;
+      }
+
+      .loading-text {
+        font-size: 12px;
+        color: var(--color-text-secondary);
+      }
+    }
+  }
+
+  .sc-actions {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-bottom: 1px solid var(--color-border);
+
+    .sc-btn {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      &.primary {
+        background-color: #3b82f6; /* Blue for commit */
+        color: white;
+
+        &:hover:not(:disabled) {
+          background-color: #2563eb;
+        }
+      }
+
+      &.secondary {
+        background-color: #10b981; /* Green for PR */
+        color: white;
+
+        &:hover:not(:disabled) {
+          background-color: #059669;
+        }
+      }
+
+      .spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid transparent;
+        border-top-color: currentColor;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+    }
+  }
+
+  .sc-output-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+
+    .sc-output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+
+      span {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+      }
+
+      .copy-btn {
+        background: none;
+        border: 1px solid var(--color-border);
+        background-color: var(--color-bg-secondary);
+        color: var(--color-text-primary);
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+
+        &:hover:not(:disabled) {
+          background-color: #333;
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      }
+    }
+
+    .sc-output-textarea {
+      flex: 1;
+      width: 100%;
+      background-color: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #e6edf7;
+      resize: none;
+      outline: none;
+
+      &::placeholder {
+        color: #555;
+      }
+    }
+  }
+
+  @keyframes spin {
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+}

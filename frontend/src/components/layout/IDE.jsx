@@ -11,6 +11,9 @@ import ArchitectureGraph from '../graph/ArchitectureGraph';
 import DatabaseDesignerHub from '../db-designer/DatabaseDesignerHub';
 import EditorMemoryHub from '../memory/EditorMemoryHub';
 import EditorIntentHub from '../intent/EditorIntentHub';
+import ApiDocsHub from '../docs/ApiDocsHub';
+import TestHub from '../test-hub/TestHub';
+import SourceControlPanel from '../explorer/SourceControlPanel';
 import { startSandbox, createProject, sendHeartbeat } from '../../services/api';
 
 import { useNavigate } from 'react-router-dom';
@@ -136,6 +139,9 @@ const IDE = () => {
                 </div>
               </>
             )}
+            {activeTab === 'source' && (
+              <SourceControlPanel />
+            )}
             {activeTab === 'search' && (
               <>
                 <div className="pane-header">SEARCH</div>
@@ -173,7 +179,23 @@ const IDE = () => {
                 </div>
               </>
             )}
-            {activeTab !== 'explorer' && activeTab !== 'graph' && activeTab !== 'search' && activeTab !== 'db-designer' && activeTab !== 'memory' && activeTab !== 'intent' && (
+            {activeTab === 'api-docs' && (
+              <>
+                <div className="pane-header">SMART API DOCS</div>
+                <div style={{ padding: '16px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                  The API Documentation Hub is open in the main view.
+                </div>
+              </>
+            )}
+            {activeTab === 'test-hub' && (
+              <>
+                <div className="pane-header">AI TEST HUB</div>
+                <div style={{ padding: '16px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                  The AI Test Generator is open in the main view.
+                </div>
+              </>
+            )}
+            {activeTab !== 'explorer' && activeTab !== 'graph' && activeTab !== 'search' && activeTab !== 'db-designer' && activeTab !== 'memory' && activeTab !== 'intent' && activeTab !== 'api-docs' && activeTab !== 'test-hub' && activeTab !== 'source' && (
               <div className="pane-header">{activeTab.toUpperCase()}</div>
             )}
           </div>
@@ -190,6 +212,10 @@ const IDE = () => {
               <EditorMemoryHub />
             ) : activeTab === 'intent' ? (
               <EditorIntentHub />
+            ) : activeTab === 'api-docs' ? (
+              <ApiDocsHub />
+            ) : activeTab === 'test-hub' ? (
+              <TestHub />
             ) : (
               <EditorPane selectedFile={selectedFile} selectedLine={selectedLine} />
             )}

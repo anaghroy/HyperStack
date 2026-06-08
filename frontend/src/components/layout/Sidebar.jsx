@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Files, Search, GitBranch, Settings, LayoutGrid, Network, UserPlus, Database, Lightbulb, Wand } from 'lucide-react';
+import { Files, Search, GitBranch, Settings, LayoutGrid, Network, UserPlus, Database, Lightbulb, Wand2, FileText, FlaskConical } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import ShareProjectModal from '../modals/ShareProjectModal';
 
@@ -23,9 +23,6 @@ const Sidebar = ({ children, activeTab, setActiveTab }) => {
           <div className={`activity-icon ${activeTab === 'graph' ? 'active' : ''}`} onClick={() => setActiveTab('graph')} title="Architecture Graph">
             <Network size={24} strokeWidth={1.5} />
           </div>
-          <div className={`activity-icon ${activeTab === 'services' ? 'active' : ''}`} onClick={() => setActiveTab('services')} title="Services">
-            <LayoutGrid size={24} strokeWidth={1.5} />
-          </div>
           <div className={`activity-icon ${activeTab === 'db-designer' ? 'active' : ''}`} onClick={() => setActiveTab('db-designer')} title="Database Designer">
             <Database size={24} strokeWidth={1.5} />
           </div>
@@ -33,7 +30,13 @@ const Sidebar = ({ children, activeTab, setActiveTab }) => {
             <Lightbulb size={24} strokeWidth={1.5} />
           </div>
           <div className={`activity-icon ${activeTab === 'intent' ? 'active' : ''}`} onClick={() => setActiveTab('intent')} title="Intent-Driven Development">
-            <Wand size={24} strokeWidth={1.5} />
+            <Wand2 size={24} strokeWidth={1.5} />
+          </div>
+          <div className={`activity-icon ${activeTab === 'api-docs' ? 'active' : ''}`} onClick={() => setActiveTab('api-docs')} title="Smart API Docs">
+            <FileText size={24} strokeWidth={1.5} />
+          </div>
+          <div className={`activity-icon ${activeTab === 'test-hub' ? 'active' : ''}`} onClick={() => setActiveTab('test-hub')} title="AI Test Hub">
+            <FlaskConical size={24} strokeWidth={1.5} />
           </div>
         </div>
         <div className="activity-bottom">

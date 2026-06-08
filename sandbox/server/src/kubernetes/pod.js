@@ -15,6 +15,7 @@ export async function createPod(sandboxId, githubUrl = "") {
       name: `sandbox-pod-${sandboxId}`,
       labels: {
         sandboxId: sandboxId,
+        role: "sandbox",
       },
     },
     spec: {
@@ -39,7 +40,7 @@ export async function createPod(sandboxId, githubUrl = "") {
         },
         {
           name: "init-template",
-          image: "template",
+          image: "template:latest",
           imagePullPolicy: "IfNotPresent",
           command: ["sh", "-c", templateInitCommand],
           volumeMounts: [
@@ -52,7 +53,7 @@ export async function createPod(sandboxId, githubUrl = "") {
       ],
       containers: [
         {
-          image: "template",
+          image: "template:latest",
           imagePullPolicy: "IfNotPresent",
           name: "sandbox-container",
           command: ["sh", "-c", mainCommand],
@@ -69,7 +70,7 @@ export async function createPod(sandboxId, githubUrl = "") {
           ],
         },
         {
-          image: "agent:v2",
+          image: "agent:v4",
           imagePullPolicy: "IfNotPresent",
           name: "agent-container",
           ports: [{ containerPort: 3000, name: "http" }],
@@ -94,7 +95,29 @@ export async function createPod(sandboxId, githubUrl = "") {
     body: podManifest,
   });
 
-  return response;
+  const podName = `sandbox-pod-${sandboxId}`;
+  
+  // Wait for the Pod to get an IP address
+  let podIp = null;
+  while (!podIp) {
+    try {
+      const podInfo = await K8sCoreV1Api.readNamespacedPod({
+        name: podName,
+        namespace: "default",
+      });
+      // @kubernetes/client-node might return { body, response } or just the object
+      const data = podInfo.body || podInfo;
+      podIp = data.status?.podIP;
+      if (!podIp) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    } catch (err) {
+      console.log(`Waiting for pod ${podName} to exist...`);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+
+  return { response, podIp };
 }
 
 export async function deletePod(sandboxId) {

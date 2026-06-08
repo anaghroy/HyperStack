@@ -379,6 +379,25 @@ export const explainFileAPI = async (filePath, fileContent) => {
   }
 };
 
+export const generateDocsAPI = async (code, format) => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/ai/generate-docs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ code, format, modelName: 'llama' })
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to generate docs (${res.status})`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error('generateDocsAPI error:', error);
+    throw error;
+  }
+};
+
 export const updateFile = async (filename, content) => {
   try {
     return await agentFetch('/update-files', {
@@ -581,6 +600,47 @@ export const getAuditLogsAPI = async () => {
     return await res.json();
   } catch (error) {
     console.error('Failed to fetch audit logs:', error);
+    throw error;
+  }
+};
+
+export const generateTestsAPI = async (code, fileName, framework) => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/ai/generate-tests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ code, fileName, framework })
+    });
+    if (!res.ok) throw new Error("Failed to generate tests");
+    return await res.json();
+  } catch (error) {
+    console.error('Failed to generate tests:', error);
+    throw error;
+  }
+};
+
+export const getGitInfoAPI = async () => {
+  try {
+    return await agentFetch('/git-info');
+  } catch (error) {
+    console.error('Failed to get git info:', error);
+    throw error;
+  }
+};
+
+export const generateCommitMsgAPI = async (gitInfo, type = 'commit') => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/ai/commit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ gitInfo, type })
+    });
+    if (!res.ok) throw new Error("Failed to generate commit/PR text");
+    return await res.json();
+  } catch (error) {
+    console.error('Failed to generate commit/PR text:', error);
     throw error;
   }
 };

@@ -4,6 +4,16 @@ import { getModel } from "../models/index.js";
 import { searchCodebase } from "../services/vectorStore.js";
 import { listFiles, readFiles, updateFiles } from "./tools.js";
 
+const getSafeModel = (modelName) => {
+  try {
+    return getModel(modelName);
+  } catch (err) {
+    console.warn(`[multiAgentWorkflow] Model ${modelName} failed to load, falling back to llama. Error: ${err.message}`);
+    return getModel("llama");
+  }
+};
+
+
 // Define the state for the graph
 const agentState = {
   messages: {
@@ -21,7 +31,7 @@ const agentState = {
 };
 
 const codeWriterNode = async (state) => {
-  const model = getModel(process.env.AI_MODEL || "llama");
+  const model = getSafeModel(process.env.AI_MODEL || "llama");
   // Bind tools to the model
   const modelWithTools = model.bindTools([listFiles, readFiles, updateFiles]);
   
@@ -41,7 +51,7 @@ If you need to query the entire codebase for context, ask the user to clarify or
 };
 
 const codeReviewerNode = async (state) => {
-  const model = getModel(process.env.AI_MODEL || "llama");
+  const model = getSafeModel(process.env.AI_MODEL || "llama");
   
   const systemMessage = new SystemMessage(`You are an expert Code Reviewer agent.
 Review the latest AIMessage from the Code Writer.

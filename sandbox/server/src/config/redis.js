@@ -1,15 +1,15 @@
 import Redis from "ioredis";
 import { deletePod } from "../kubernetes/pod.js";
-import { deleteService } from "../kubernetes/service.js";
 
 export const redis = new Redis(process.env.REDIS_URL);
 const subscriber = new Redis(process.env.REDIS_URL);
 
-export async function createSandboxKey(sandboxId) {
+export async function createSandboxKey(sandboxId, podIp) {
   await redis.set(
     `sandbox:${sandboxId}`,
     JSON.stringify({
       status: "active",
+      podIp: podIp,
     }),
     "EX",
     1200,
@@ -36,7 +36,6 @@ subscriber.on("message", async (channel, key) => {
   const sandboxId = key.split(":")[1];
   // Delete the associated Kubernetes resources
   await deletePod(sandboxId);
-  await deleteService(sandboxId);
 });
 
 export default { subscriber };

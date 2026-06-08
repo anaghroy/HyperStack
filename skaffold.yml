@@ -71,6 +71,7 @@ manifests:
     - k8s/rabbitmq-service.yml
     - k8s/secret.yml
     - k8s/ingress.yml
+    - k8s/sandbox-network-policy.yml
 
 deploy:
   kubectl: {}
