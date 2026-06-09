@@ -7,30 +7,55 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #030408; /* Deepest black/blue */
+  background-color: #030408; 
   overflow: hidden;
 
-  /* Ambient glowing background effect to match screenshot */
-  .background-ambient {
+   .background-ambient {
     position: absolute;
     width: 100vw;
     height: 100vh;
-    background: radial-gradient(circle at 50% 50%, rgba(23, 49, 111, 0.4) 0%, rgba(3, 4, 8, 1) 60%);
+    background: radial-gradient(circle at top left, #082314 0%, rgb(3, 4, 8) 60%);
     z-index: 0;
     pointer-events: none;
   }
 
-  .auth-card {
+  .auth-container {
     position: relative;
     z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     width: 100%;
     max-width: 420px;
-    border-radius: 24px;
-    background: linear-gradient(180deg, rgba(30, 34, 45, 0.9) 0%, rgba(18, 20, 26, 0.95) 100%);
+    gap: 24px;
+
+    .auth-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      
+      img {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+      }
+      
+      span {
+        font-size: 20px;
+        font-weight: 600;
+        color: #fff;
+        letter-spacing: -0.02em;
+      }
+    }
+  }
+
+  .auth-card {
+    width: 100%;
+    border-radius: 12px;
+    background: #111111;
     box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8), 
-                inset 0 1px 0 rgba(255, 255, 255, 0.1),
-                inset 1px 0 0 rgba(100, 150, 255, 0.1); /* Subtle blue edge highlight */
-    border: 1px solid rgba(0, 0, 0, 0.5);
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     
     .auth-card-inner {
       padding: 48px 40px;
@@ -47,8 +72,8 @@
 
       h1 {
         font-family: var(--font-sans);
-        font-size: 32px;
-        font-weight: 500;
+        font-size: 24px;
+        font-weight: 600;
         color: #ffffff;
         margin: 0;
         letter-spacing: -0.02em;
@@ -75,11 +100,11 @@
         justify-content: center;
         gap: 12px;
         width: 100%;
-        height: 52px;
-        background-color: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.03);
-        border-radius: 26px; /* Pill shape matching the screenshot's 'Log in' button */
-        color: #ffffff;
+        height: 44px;
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        color: rgba(255, 255, 255, 0.9);
         font-family: var(--font-sans);
         font-size: 14px;
         font-weight: 500;
@@ -87,7 +112,7 @@
         transition: all 0.2s ease;
 
         svg {
-          color: rgba(255, 255, 255, 0.7);
+          color: rgba(255, 255, 255, 0.9);
           fill: currentColor;
           width: 18px;
           height: 18px;
@@ -95,7 +120,7 @@
 
         &:hover {
           background-color: rgba(255, 255, 255, 0.1);
-          border-color: rgba(255, 255, 255, 0.08);
+          border-color: rgba(255, 255, 255, 0.15);
         }
 
         &:active {
@@ -104,9 +129,34 @@
       }
     }
 
-    
+
   }
-}
+
+  .auth-legal {
+    text-align: center;
+    max-width: 300px;
+    margin-top: 24px;
+
+    p {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.4);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    a {
+      color: rgba(255, 255, 255, 0.6);
+      text-decoration: underline;
+      text-decoration-color: rgba(255, 255, 255, 0.3);
+      text-underline-offset: 2px;
+      transition: color 0.2s;
+
+      &:hover {
+        color: #fff;
+      }
+    }
+    }
+  }
 
 .auth-loading-screen {
   width: 100vw;

@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import logo from "../assets/images/logo.png";
 
 const GoogleIcon = () => (
   <svg
@@ -71,32 +72,43 @@ const Login = () => {
     <div className="login-page-wrapper">
       <div className="background-ambient"></div>
 
-      <div className="auth-card">
-        <div className="auth-card-inner">
-          <div className="auth-header">
-            <h1>Log in</h1>
-            <p>
-              Log in to your account and seamlessly continue managing your
-              projects, ideas, and progress just where you left off.
-            </p>
-          </div>
+      <div className="auth-container">
+        <div className="auth-logo">
+          <img src={logo} alt="HyperStack Logo" />
+          <span>HyperStack</span>
+        </div>
 
-          <div className="auth-actions">
-            <button
-              className="oauth-btn google-btn"
-              onClick={handleGoogleLogin}
-            >
-              <GoogleIcon />
-              <span>Continue with Google</span>
-            </button>
-            <button
-              className="oauth-btn github-btn"
-              onClick={handleGithubLogin}
-            >
-              <GitHubIcon />
-              <span>Continue with GitHub</span>
-            </button>
+        <div className="auth-card">
+          <div className="auth-card-inner">
+            <div className="auth-header">
+              <h1>Welcome back</h1>
+              <p>Sign in to your workspace to continue building</p>
+            </div>
+
+            <div className="auth-actions">
+              <button
+                className="oauth-btn github-btn"
+                onClick={handleGithubLogin}
+              >
+                <GitHubIcon />
+                <span>Continue with GitHub</span>
+              </button>
+              <button
+                className="oauth-btn google-btn"
+                onClick={handleGoogleLogin}
+              >
+                <GoogleIcon />
+                <span>Continue with Google</span>
+              </button>
+            </div>
           </div>
+        </div>
+
+        <div className="auth-legal">
+          <p>
+            By continuing, you agree to HyperStack's{" "}
+            <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+          </p>
         </div>
       </div>
     </div>

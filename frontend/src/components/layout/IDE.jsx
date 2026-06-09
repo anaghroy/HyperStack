@@ -114,6 +114,26 @@ const IDE = () => {
     document.addEventListener('mouseup', onMouseUp);
   }, [panelHeight, isPanelFullscreen, isPanelOpen]);
 
+  const startAiChatResize = useCallback((e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = aiChatWidth;
+
+    const onMouseMove = (moveEvent) => {
+      // For a right-anchored panel, moving left (negative delta) increases width
+      const newWidth = Math.max(250, Math.min(startWidth - (moveEvent.clientX - startX), window.innerWidth - 200));
+      setAiChatWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, [aiChatWidth]);
+
   return (
     <div className="ide-container" ref={containerRef}>
       <TopBar toggleAIChat={() => dispatch(setIsAIChatOpen(!isAIChatOpen))} />
@@ -239,6 +259,7 @@ const IDE = () => {
           <AIChatPanel 
             width={aiChatWidth} 
             onClose={() => dispatch(setIsAIChatOpen(false))} 
+            onStartResize={startAiChatResize}
           />
         )}
       </div>

@@ -4,7 +4,7 @@ import { invokeAI, getSandboxId, explainCodeAPI } from '../../services/api';
 import { useSelector, useDispatch } from 'react-redux';
 import { setAiInitialMessage, setAiExplainRequest } from '../../redux/slices/projectSlice';
 
-const AIChatPanel = ({ onClose, width }) => {
+const AIChatPanel = ({ onClose, width, onStartResize }) => {
   const [messages, setMessages] = useState([
     { role: 'ai', content: 'Hi! I am your HyperStack AI assistant. How can I help you today?' }
   ]);
@@ -150,6 +150,7 @@ const AIChatPanel = ({ onClose, width }) => {
 
   return (
     <div className="ai-chat-panel" style={{ width: `${width}px` }}>
+      {onStartResize && <div className="resizer-left" onMouseDown={onStartResize} />}
       <div className="chat-header">
         <div className="header-title">
           <Sparkles size={16} color="var(--color-primary)" />

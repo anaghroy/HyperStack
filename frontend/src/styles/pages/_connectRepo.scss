@@ -537,37 +537,42 @@
     .connecting-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(11, 12, 16, 0.8);
+      background: rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(4px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
+      animation: fadeIn 0.2s ease-out;
 
       .connecting-modal {
-        background: #1f2833;
+        background: #111111;
         padding: 3rem;
-        border-radius: 16px;
-        border: 1px solid rgba(102, 252, 241, 0.2);
+        border-radius: 8px;
+        width: 480px;
+        max-width: 90vw;
+        border: 1px solid rgba(255, 255, 255, 0.05);
         display: flex;
         flex-direction: column;
         align-items: center;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
 
         .primary-color {
-          color: #4285f4;
+          color: #3b82f6;
           margin-bottom: 1.5rem;
         }
 
         h3 {
           color: #fff;
-          font-size: 1.5rem;
+          font-size: 18px;
+          font-weight: 600;
           margin-bottom: 0.5rem;
         }
 
         p {
-          color: #aaa;
+          color: rgba(255, 255, 255, 0.4);
           margin: 0;
+          font-size: 14px;
         }
       }
     }
