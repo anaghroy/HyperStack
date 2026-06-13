@@ -1,5 +1,6 @@
 import express from "express";
 import { createPod } from "../kubernetes/pod.js";
+import { createService } from "../kubernetes/service.js";
 import { v7 as uuid } from "uuid";
 import { createSandboxKey, refreshSandboxKey } from "../config/redis.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
@@ -18,12 +19,15 @@ router.get("/health", (req, res) => {
 });
 
 router.post("/project", authMiddleware, async (req, res) => {
-  const { title, githubUrl } = req.body;
+  const { title, githubUrl, installCmd, startCmd, port } = req.body;
 
   const newProject = new Project({
     user: req.user.id,
     title,
     githubUrl: githubUrl || "",
+    installCmd: installCmd || "",
+    startCmd: startCmd || "",
+    port: port || 5173,
   });
 
   await newProject.save();
@@ -48,13 +52,20 @@ router.post("/start", authMiddleware, async (req, res) => {
         .json({ message: "Project not found or access denied" });
     }
 
-    const sandboxId = uuid();
+    const sandboxId = projectId.toString();
 
     // Create pod and wait for IP
-    const { podIp } = await createPod(sandboxId, project.githubUrl);
+    const { podIp } = await createPod(
+      sandboxId, 
+      project.githubUrl, 
+      project.installCmd, 
+      project.startCmd, 
+      project.port
+    );
+    await createService(sandboxId);
 
     // Save mapping to Redis
-    await createSandboxKey(sandboxId, podIp);
+    await createSandboxKey(sandboxId, podIp, project.port);
 
     // Dispatch real-time notification
     await sendNotification({

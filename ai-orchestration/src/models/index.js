@@ -19,6 +19,30 @@ const models = {
   kimi: kimiModel,
 };
 
+const fallbackChainNames = ["llama", "mistral", "qwen", "cohere", "deepseek", "minimax", "step", "kimi"];
+
+export const getModelWithFallbacksAndTools = (modelName, tools = []) => {
+  const baseModel = models[modelName];
+  if (!baseModel) throw new Error(`Model ${modelName} not found`);
+
+  // Bind tools if provided
+  let primaryModel = tools.length > 0 ? baseModel.bindTools(tools) : baseModel;
+
+  // Filter out the primary model from the fallback chain
+  const fallbacks = fallbackChainNames
+    .filter(name => name !== modelName && models[name])
+    .map(name => {
+      const fallbackModel = models[name];
+      return tools.length > 0 ? fallbackModel.bindTools(tools) : fallbackModel;
+    });
+
+  if (fallbacks.length > 0) {
+    return primaryModel.withFallbacks({ fallbacks });
+  }
+
+  return primaryModel;
+};
+
 
 
 /**
@@ -30,8 +54,8 @@ export const getModel = (name) => {
   const model = models[name];
 
   if (!model) {
-    throw new Error(`Model "${name}" not found. Available models: ${Object.keys(models).join(", ")}`);
-
+    console.warn(`[WARNING] Model "${name}" not found. Falling back to llama. Available models: ${Object.keys(models).join(", ")}`);
+    return models["llama"];
   }
   return model;
 };

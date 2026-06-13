@@ -4,12 +4,13 @@ import { deletePod } from "../kubernetes/pod.js";
 export const redis = new Redis(process.env.REDIS_URL);
 const subscriber = new Redis(process.env.REDIS_URL);
 
-export async function createSandboxKey(sandboxId, podIp) {
+export async function createSandboxKey(sandboxId, podIp, port = 5173) {
   await redis.set(
     `sandbox:${sandboxId}`,
     JSON.stringify({
       status: "active",
       podIp: podIp,
+      port: port,
     }),
     "EX",
     1200,

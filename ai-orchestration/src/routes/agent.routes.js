@@ -77,7 +77,8 @@ agentRouter.post("/invoke", async (req, res) => {
     const tokens = response.tokens || 100; // Fallback estimate if token usage isn't present
     await trackTokenUsage(req.user.id || req.user._id, tokens);
 
-    res.write(`data: ${JSON.stringify({ text: fullAiResponse })}\n\n`);
+    // Stream has already been written via writer; no need to send full response again
+
 
     // Save to DB
     chatDoc.messages.push({ role: "user", content: message });

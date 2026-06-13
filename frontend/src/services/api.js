@@ -164,13 +164,13 @@ export const sendHeartbeat = async (sandboxId) => {
   }
 };
 
-export const createProject = async (title, githubUrl = "") => {
+export const createProject = async (title, githubUrl = "", installCmd = "", startCmd = "", port = 5173) => {
   try {
     const res = await apiFetch(`${API_BASE}/api/sandbox/project`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ title, githubUrl }),
+      body: JSON.stringify({ title, githubUrl, installCmd, startCmd, port }),
     });
     return await res.json();
   } catch (error) {

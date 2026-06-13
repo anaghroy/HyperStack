@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Sparkles } from 'lucide-react';
+import { X, Send, Sparkles, FileCode } from 'lucide-react';
 import { invokeAI, getSandboxId, explainCodeAPI } from '../../services/api';
 import { useSelector, useDispatch } from 'react-redux';
 import { setAiInitialMessage, setAiExplainRequest } from '../../redux/slices/projectSlice';
@@ -24,7 +24,7 @@ const AIChatPanel = ({ onClose, width, onStartResize }) => {
   }, [messages]);
 
   const handleSend = async (overrideMessage = null) => {
-    const messageToSend = overrideMessage || inputValue;
+    const messageToSend = typeof overrideMessage === 'string' ? overrideMessage : inputValue;
     if (!messageToSend.trim() || isGenerating) return;
 
     setInputValue('');
@@ -61,6 +61,8 @@ const AIChatPanel = ({ onClose, width, onStartResize }) => {
                 const data = JSON.parse(line.substring(6));
                 if (data.error) {
                   textToAdd += `\n\n[Error: ${data.error}]\n`;
+                } else if (data.status) {
+                  textToAdd += `\n> ${data.status}\n\n`;
                 } else {
                   textToAdd += data.text || '';
                 }
@@ -148,6 +150,29 @@ const AIChatPanel = ({ onClose, width, onStartResize }) => {
     }
   }, [aiExplainRequest]);
 
+  const renderMessageContent = (content) => {
+    const lines = content.split('\n');
+    return lines.map((line, idx) => {
+      // Skip rendering anything for empty lines if they are just padding around execution status
+      if (line.trim() === '') {
+        // Only render <br/> if it's not the very first or very last few lines, or just skip it if next line is a tool execution to avoid double spacing
+        const nextLine = lines[idx + 1];
+        if (!nextLine || nextLine.trim().startsWith('> Executing') || idx === 0) return null;
+        return <br key={idx} />;
+      }
+      
+      if (line.trim().startsWith('> Executing')) {
+        return (
+          <div key={idx} className="tool-execution-status">
+            <FileCode size={12} className="tool-icon" />
+            {line.trim().substring(2)}
+          </div>
+        );
+      }
+      return <span key={idx}>{line}<br /></span>;
+    });
+  };
+
   return (
     <div className="ai-chat-panel" style={{ width: `${width}px` }}>
       {onStartResize && <div className="resizer-left" onMouseDown={onStartResize} />}
@@ -163,7 +188,7 @@ const AIChatPanel = ({ onClose, width, onStartResize }) => {
         {messages.map((msg, idx) => (
           <div key={idx} className={`message ${msg.role}`}>
             <div className="message-content">
-              {msg.content}
+              {renderMessageContent(msg.content)}
             </div>
           </div>
         ))}

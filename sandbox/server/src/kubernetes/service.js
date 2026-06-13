@@ -31,11 +31,34 @@ export const createService = async (sandboxId) => {
     },
   };
 
+  const serviceName = `sandbox-service-${sandboxId}`;
+
+  // Check if service already exists
+  let serviceExists = false;
+  try {
+    await K8sCoreV1Api.readNamespacedService({
+      name: serviceName,
+      namespace: "default",
+    });
+    serviceExists = true;
+    console.log(`Service ${serviceName} already exists. Proceeding.`);
+  } catch (error) {
+    // Service doesn't exist, we will create it
+  }
+
   // Create the service
-  const response = await K8sCoreV1Api.createNamespacedService({
-    namespace: "default",
-    body: serviceManifest,
-  });
+  let response;
+  if (!serviceExists) {
+    try {
+      response = await K8sCoreV1Api.createNamespacedService({
+        namespace: "default",
+        body: serviceManifest,
+      });
+    } catch (error) {
+      console.error("Error creating service:", error);
+      throw error;
+    }
+  }
 
   return response;
 };

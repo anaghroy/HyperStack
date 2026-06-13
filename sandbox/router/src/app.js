@@ -3,7 +3,7 @@ import morgan from "morgan";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { createProxyServer } from "httpxy";
 import http from "http";
-import { refreshTTL, getPodIp } from "../config/redis.js";
+import { refreshTTL, getPodInfo } from "../config/redis.js";
 
 const app = express();
 app.use(morgan("combined"));
@@ -27,13 +27,13 @@ const dynamicProxy = createProxyMiddleware({
     const sandboxId = parts[0];
     const type = parts[1];
 
-    const podIp = await getPodIp(sandboxId);
-    if (!podIp) return "http://127.0.0.1:9999"; // Pod not found or expired
+    const podInfo = await getPodInfo(sandboxId);
+    if (!podInfo || !podInfo.podIp) return "http://127.0.0.1:9999"; // Pod not found or expired
 
     if (type === "agent") {
-      return `http://${podIp}:3000`;
+      return `http://${podInfo.podIp}:3000`;
     } else if (type === "preview") {
-      return `http://${podIp}:5173`;
+      return `http://${podInfo.podIp}:${podInfo.port}`;
     }
     return "http://127.0.0.1:9999";
   },
@@ -73,8 +73,8 @@ server.on("upgrade", async (req, socket, head) => {
   const sandboxId = host.split(".")[0];
   const type = host.split(".")[1];
 
-  const podIp = await getPodIp(sandboxId);
-  if (!podIp) {
+  const podInfo = await getPodInfo(sandboxId);
+  if (!podInfo || !podInfo.podIp) {
     socket.destroy();
     return;
   }
@@ -85,11 +85,11 @@ server.on("upgrade", async (req, socket, head) => {
 
   if (type === "agent") {
     wsProxy
-      .ws(req, socket, { target: `http://${podIp}:3000` }, head)
+      .ws(req, socket, { target: `http://${podInfo.podIp}:3000` }, head)
       .catch(() => socket.destroy());
   } else if (type === "preview") {
     wsProxy
-      .ws(req, socket, { target: `http://${podIp}:5173` }, head)
+      .ws(req, socket, { target: `http://${podInfo.podIp}:${podInfo.port}` }, head)
       .catch(() => socket.destroy());
   } else {
     socket.destroy();

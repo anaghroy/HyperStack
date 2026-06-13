@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { Loader2, ArrowLeft, Search, Link as LinkIcon, Plus } from 'lucide-react';
+import { Loader2, ArrowLeft, Search, Link as LinkIcon, Plus, Terminal, Play, Hash, ChevronDown, ChevronUp } from 'lucide-react';
 import { ShieldCheck } from 'lucide-react';
 import { FaGithub } from "react-icons/fa";
 import { SiGitlab } from "react-icons/si";
@@ -25,6 +25,11 @@ const ConnectRepo = () => {
   
   const [connecting, setConnecting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [installCmd, setInstallCmd] = useState('');
+  const [startCmd, setStartCmd] = useState('');
+  const [port, setPort] = useState(5173);
 
   // Check if user is logged in via GitHub (we look for githubId)
   const isGithubUser = !!user?.githubId;
@@ -69,7 +74,7 @@ const ConnectRepo = () => {
 
     try {
       // Create project in DB
-      const data = await createProject(finalTitle, repoUrl);
+      const data = await createProject(finalTitle, repoUrl, installCmd, startCmd, port);
       if (data && data.project) {
         // Start Sandbox immediately
         const startData = await startSandbox(data.project._id);
@@ -182,6 +187,7 @@ const ConnectRepo = () => {
             </div>
 
             {isGithubUser ? (
+              <>
               <div className="repository-list-wrapper">
                 <div className="list-header">
                   <h3>Repository</h3>
@@ -228,6 +234,56 @@ const ConnectRepo = () => {
                   )}
                 </div>
               </div>
+                <div className="advanced-config-wrapper" style={{ marginTop: '20px', borderTop: '1px solid #222', paddingTop: '20px' }}>
+                  <div className="list-header" style={{ cursor: 'pointer', marginBottom: showAdvanced ? '15px' : '0' }} onClick={() => setShowAdvanced(!showAdvanced)}>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#ccc' }}>
+                      Advanced Configuration
+                      {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </h3>
+                  </div>
+                  
+                  {showAdvanced && (
+                    <div className="manual-import-form">
+                      <div className="form-group">
+                        <label style={{ fontSize: '12px', color: '#888', marginBottom: '8px', display: 'block' }}>Install Command (Optional)</label>
+                        <div className="input-with-icon">
+                          <Terminal size={16} />
+                          <input 
+                            type="text" 
+                            placeholder="e.g. npm install" 
+                            value={installCmd}
+                            onChange={(e) => setInstallCmd(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label style={{ fontSize: '12px', color: '#888', marginBottom: '8px', display: 'block' }}>Start Command (Optional)</label>
+                        <div className="input-with-icon">
+                          <Play size={16} />
+                          <input 
+                            type="text" 
+                            placeholder="e.g. npm run dev" 
+                            value={startCmd}
+                            onChange={(e) => setStartCmd(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label style={{ fontSize: '12px', color: '#888', marginBottom: '8px', display: 'block' }}>Port</label>
+                        <div className="input-with-icon">
+                          <Hash size={16} />
+                          <input 
+                            type="number" 
+                            placeholder="e.g. 5173" 
+                            value={port || ''}
+                            onChange={(e) => setPort(e.target.value ? Number(e.target.value) : 5173)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
             ) : (
               <div className="repository-list-wrapper">
                  <div className="list-header">
@@ -260,6 +316,56 @@ const ConnectRepo = () => {
                         onChange={(e) => setManualTitle(e.target.value)}
                       />
                     </div>
+                  </div>
+
+                  <div className="advanced-config-wrapper" style={{ marginTop: '20px', borderTop: '1px solid #222', paddingTop: '20px', marginBottom: '20px' }}>
+                    <div className="list-header" style={{ cursor: 'pointer', marginBottom: showAdvanced ? '15px' : '0' }} onClick={() => setShowAdvanced(!showAdvanced)}>
+                      <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#ccc' }}>
+                        Advanced Configuration
+                        {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </h3>
+                    </div>
+                    
+                    {showAdvanced && (
+                      <div className="manual-import-form" style={{ marginTop: 0 }}>
+                        <div className="form-group">
+                          <label style={{ fontSize: '12px', color: '#888', marginBottom: '8px', display: 'block' }}>Install Command (Optional)</label>
+                          <div className="input-with-icon">
+                            <Terminal size={16} />
+                            <input 
+                              type="text" 
+                              placeholder="e.g. npm install" 
+                              value={installCmd}
+                              onChange={(e) => setInstallCmd(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label style={{ fontSize: '12px', color: '#888', marginBottom: '8px', display: 'block' }}>Start Command (Optional)</label>
+                          <div className="input-with-icon">
+                            <Play size={16} />
+                            <input 
+                              type="text" 
+                              placeholder="e.g. npm run dev" 
+                              value={startCmd}
+                              onChange={(e) => setStartCmd(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label style={{ fontSize: '12px', color: '#888', marginBottom: '8px', display: 'block' }}>Port</label>
+                          <div className="input-with-icon">
+                            <Hash size={16} />
+                            <input 
+                              type="number" 
+                              placeholder="e.g. 5173" 
+                              value={port || ''}
+                              onChange={(e) => setPort(e.target.value ? Number(e.target.value) : 5173)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <button 
                     type="submit" 

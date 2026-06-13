@@ -1,13 +1,45 @@
 import { K8sCoreV1Api } from "./config.js";
 
-export async function createPod(sandboxId, githubUrl = "") {
+export async function createPod(sandboxId, githubUrl = "", installCmd = "", startCmd = "", port = 5173) {
   // Define init command for template copying
-  const templateInitCommand = `if [ -z "$(ls -A /seed 2>/dev/null)" ]; then cp -r /workspace/. /seed/; fi`;
+  const templateInitCommand = `if [ -z "$(ls -A /seed 2>/dev/null)" ]; then cp -a /workspace/. /seed/ || cp -r /workspace/* /seed/; fi`;
 
   // Define main container command
-  const mainCommand = githubUrl
-    ? `npm install && npm run dev -- --host 0.0.0.0 || tail -f /dev/null`
-    : `npm run dev -- --host 0.0.0.0`;
+  let mainCommand = `cd /workspace && npm run dev -- --host 0.0.0.0`;
+  if (githubUrl) {
+    if (startCmd) {
+      const install = installCmd ? installCmd : "npm install";
+      mainCommand = `cd /workspace && PORT=${port} ${install} && PORT=${port} ${startCmd} || tail -f /dev/null`;
+    } else {
+      mainCommand = `
+        cd /workspace
+        
+        if [ ! -f "package.json" ]; then
+          if [ -f "frontend/package.json" ]; then
+            cd frontend
+          elif [ -f "client/package.json" ]; then
+            cd client
+          elif [ -f "web/package.json" ]; then
+            cd web
+          fi
+        fi
+
+        if [ -f "package.json" ]; then
+          if grep -q '"vite"' package.json; then
+            PORT=${port} npm install && PORT=${port} npm run dev -- --host 0.0.0.0 --port ${port} || tail -f /dev/null
+          elif grep -q '"next"' package.json; then
+            PORT=${port} npm install && PORT=${port} npm run dev || tail -f /dev/null
+          elif grep -q '"react-scripts"' package.json; then
+            PORT=${port} npm install && PORT=${port} npm start || tail -f /dev/null
+          else
+            PORT=${port} npm install && PORT=${port} npm start || tail -f /dev/null
+          fi
+        else
+          tail -f /dev/null
+        fi
+      `;
+    }
+  }
 
   // Define Pod Manifest
   const podManifest = {
@@ -57,7 +89,7 @@ export async function createPod(sandboxId, githubUrl = "") {
           imagePullPolicy: "IfNotPresent",
           name: "sandbox-container",
           command: ["sh", "-c", mainCommand],
-          ports: [{ containerPort: 5173, name: "http" }],
+          ports: [{ containerPort: port, name: "http" }],
           resources: {
             limits: { cpu: "500m", memory: "1Gi" },
             requests: { cpu: "50m", memory: "100Mi" },
@@ -70,10 +102,10 @@ export async function createPod(sandboxId, githubUrl = "") {
           ],
         },
         {
-          image: "agent:v4",
+          image: "agent:latest",
           imagePullPolicy: "IfNotPresent",
           name: "agent-container",
-          ports: [{ containerPort: 3000, name: "http" }],
+          ports: [{ containerPort: 3000, name: "http-agent" }],
           resources: {
             limits: { cpu: "500m", memory: "1Gi" },
             requests: { cpu: "50m", memory: "100Mi" },
@@ -89,13 +121,34 @@ export async function createPod(sandboxId, githubUrl = "") {
     },
   };
 
-  // Create the pod in the default namespace
-  const response = await K8sCoreV1Api.createNamespacedPod({
-    namespace: "default",
-    body: podManifest,
-  });
-
   const podName = `sandbox-pod-${sandboxId}`;
+
+  // Check if pod already exists
+  let podExists = false;
+  try {
+    await K8sCoreV1Api.readNamespacedPod({
+      name: podName,
+      namespace: "default",
+    });
+    podExists = true;
+    console.log(`Pod ${podName} already exists. Proceeding.`);
+  } catch (error) {
+    // Pod doesn't exist, we will create it
+  }
+
+  let response;
+  if (!podExists) {
+    // Create the pod in the default namespace
+    try {
+      response = await K8sCoreV1Api.createNamespacedPod({
+        namespace: "default",
+        body: podManifest,
+      });
+    } catch (error) {
+      console.error("Error creating pod:", error);
+      throw error;
+    }
+  }
   
   // Wait for the Pod to get an IP address
   let podIp = null;

@@ -13,6 +13,18 @@ const projectSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    installCmd: {
+        type: String,
+        default: ""
+    },
+    startCmd: {
+        type: String,
+        default: ""
+    },
+    port: {
+        type: Number,
+        default: 5173
+    },
     collaborators: [
         {
             user: {

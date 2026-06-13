@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getModel } from "../models/index.js";
+import { getModelWithFallbacksAndTools } from "../models/index.js";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 
 export const runAutoFixer = async (projectId) => {
@@ -52,7 +52,7 @@ Format:
 `;
 
     // 4. Invoke model to get fixes
-    const model = getModel(process.env.AI_MODEL || "llama");
+    const model = getModelWithFallbacksAndTools(process.env.AI_MODEL || "llama");
     const aiResponse = await model.invoke([
       new SystemMessage("You are a strict JSON-only AI auto-fixer."),
       new HumanMessage(prompt)

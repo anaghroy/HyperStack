@@ -7,15 +7,21 @@ const tools = [listFiles, readFiles, updateFiles];
 
 const fallbackChain = [
   "llama",
+  "mistral",
+  "qwen",
   "cohere",
   "deepseek",
-  "qwen",
+  "minimax",
+  "step",
+  "kimi"
+];
+
 const invokeAgent = async (params) => {
-  const defaultModelName = process.env.AI_MODEL || "llama";
+  const defaultModelName = process.env.AI_MODEL || "mistral";
   
-  const modelsToTry = defaultModelName === "llama" 
-    ? ["llama", "mistral", "qwen"] 
-    : [defaultModelName, "llama", "mistral"];
+  const modelsToTry = defaultModelName === "mistral" 
+    ? fallbackChain 
+    : [defaultModelName, ...fallbackChain.filter(m => m !== defaultModelName)];
 
   let lastError;
 
@@ -42,11 +48,11 @@ const invokeAgent = async (params) => {
 };
 
 const streamAgent = async function* (inputs, config) {
-  const defaultModelName = process.env.AI_MODEL || "llama";
+  const defaultModelName = process.env.AI_MODEL || "mistral";
   
-  const modelsToTry = defaultModelName === "llama" 
-    ? ["llama", "mistral", "qwen"] 
-    : [defaultModelName, "llama", "mistral"];
+  const modelsToTry = defaultModelName === "mistral" 
+    ? fallbackChain 
+    : [defaultModelName, ...fallbackChain.filter(m => m !== defaultModelName)];
 
   let lastError;
 

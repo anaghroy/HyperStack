@@ -76,6 +76,26 @@
         white-space: pre-wrap;
         word-break: break-word;
         overflow-wrap: break-word;
+
+        .tool-execution-status {
+          background-color: var(--color-background);
+          border: 1px solid var(--color-border);
+          padding: 6px 10px;
+          border-radius: 6px;
+          margin: 6px 0;
+          &:first-child { margin-top: 0; }
+          &:last-child { margin-bottom: 0; }
+          font-family: var(--font-mono);
+          font-size: 12px;
+          color: var(--color-text-secondary);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          
+          .tool-icon {
+            color: var(--color-primary);
+          }
+        }
       }
     }
   }

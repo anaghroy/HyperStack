@@ -11,4 +11,6 @@ export const minimaxModel = new ChatOpenAI({
     baseURL: "https://integrate.api.nvidia.com/v1",
   },
   temperature: 0.7,
+  maxRetries: 0,
+  timeout: 10000
 });

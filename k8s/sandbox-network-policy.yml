@@ -12,11 +12,14 @@ spec:
     - Egress
   
   ingress:
-    # Only allow ingress traffic from the router pod
+    # Only allow ingress traffic from the router pod and ai-server pod
     - from:
         - podSelector:
             matchLabels:
               app: router
+        - podSelector:
+            matchLabels:
+              app: ai-server
       ports:
         - protocol: TCP
           port: 5173

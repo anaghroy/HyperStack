@@ -9,6 +9,7 @@ import {
   Wand2,
   FileText,
   FlaskConical,
+  Network
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import ShareProjectModal from "../modals/ShareProjectModal";
