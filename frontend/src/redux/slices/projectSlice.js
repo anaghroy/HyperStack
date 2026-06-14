@@ -3,6 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
   activeProject: null,
   sandboxId: null,
+  sandboxStatus: 'idle', // 'idle' | 'creating' | 'installing' | 'ready'
   isAIChatOpen: false,
   aiInitialMessage: null,
   aiExplainRequest: null,
@@ -17,6 +18,9 @@ const projectSlice = createSlice({
     },
     setSandboxId: (state, action) => {
       state.sandboxId = action.payload;
+    },
+    setSandboxStatus: (state, action) => {
+      state.sandboxStatus = action.payload;
     },
     setIsAIChatOpen: (state, action) => {
       state.isAIChatOpen = action.payload;
@@ -33,6 +37,7 @@ const projectSlice = createSlice({
 export const { 
   setActiveProject, 
   setSandboxId, 
+  setSandboxStatus,
   setIsAIChatOpen, 
   setAiInitialMessage,
   setAiExplainRequest

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logoutUser } from '../redux/slices/authSlice';
-import { setActiveProject, setSandboxId } from '../redux/slices/projectSlice';
+import { setActiveProject, setSandboxId, setSandboxStatus } from '../redux/slices/projectSlice';
 import { listProjects, createProject, startSandbox, deleteProject, updateProject, getSharedProjectsAPI, leaveProjectAPI } from '../services/api';
 import { Plus, Folder, Loader2, Search, LogOut, Trash2, LayoutDashboard, Users, Settings, Rocket, Link as LinkIcon, Edit2, ExternalLink, X } from 'lucide-react';
 import { useDebounce } from '../hooks/useDebounce';
@@ -111,15 +111,18 @@ const Dashboard = () => {
   const handleOpenProject = async (project) => {
     try {
       setStartingProjectId(project._id);
+      dispatch(setSandboxStatus('creating'));
       const data = await startSandbox(project._id);
       
       if (data && data.sandboxId) {
         dispatch(setActiveProject(project));
         dispatch(setSandboxId(data.sandboxId));
+        dispatch(setSandboxStatus('installing'));
         navigate('/ide');
       }
     } catch (error) {
       console.error("Failed to start sandbox", error);
+      dispatch(setSandboxStatus('idle'));
       setStartingProjectId(null);
     }
   };

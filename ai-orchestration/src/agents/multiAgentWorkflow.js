@@ -114,10 +114,25 @@ const codeReviewerNode = async (state) => {
     return { feedback: lastMessage.content, approved: false };
   }
 
+  const isFromCodeWriter = lastMessage.constructor.name === "AIMessage" || lastMessage._getType && lastMessage._getType() === "ai" || lastMessage.type === "ai";
+  if (isFromCodeWriter && (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0)) {
+    console.log(`[${new Date().toISOString()}] 🔍 [Code Reviewer] REJECTED: No tool calls generated.`);
+    return { feedback: "CRITICAL ERROR: You did not use any tools! You MUST use tools like 'create_or_update_files' to write code. Do not just output conversational text. Respond ONLY with tool calls." };
+  }
+
   const hasFinished = state.messages.some(m => 
     m.tool_calls && m.tool_calls.some(tc => tc.name === "finish_task")
   );
   
+  const hasCalledOtherTools = state.messages.some(m => 
+    m.tool_calls && m.tool_calls.some(tc => tc.name !== "finish_task")
+  );
+
+  if (hasFinished && !hasCalledOtherTools) {
+    console.log(`[${new Date().toISOString()}] 🔍 [Code Reviewer] REJECTED: Finished without doing work.`);
+    return { feedback: "CRITICAL ERROR: You called 'finish_task' but you haven't actually done any work! You must use tools like 'create_or_update_files' or 'read_files' first to fulfill the user's request. Do not skip the work." };
+  }
+
   if (!hasFinished) {
     console.log(`[${new Date().toISOString()}] 🔍 [Code Reviewer] REJECTED: Missing finish_task tool call.`);
     return { feedback: "CRITICAL ERROR: You did not use the 'finish_task' tool! You must actually execute this tool when you are completely done writing the code." };

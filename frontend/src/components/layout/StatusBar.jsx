@@ -1,15 +1,18 @@
 import React from 'react';
-import { GitBranch, XCircle, AlertTriangle, CheckCircle2, Radio } from 'lucide-react';
+import { GitBranch, XCircle, AlertTriangle, CheckCircle2, Radio, Loader2 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 
 const StatusBar = () => {
-  const { sandboxId } = useSelector((state) => state.project);
+  const { sandboxId, sandboxStatus } = useSelector((state) => state.project);
 
   const handleGoLive = () => {
-    if (sandboxId) {
+    if (sandboxId && sandboxStatus === 'ready') {
       window.open(`http://${sandboxId}.preview.localhost`, '_blank');
     }
   };
+  
+  const isInstalling = sandboxStatus === 'installing';
+  
   return (
     <div className="statusbar-container">
       <div className="statusbar-left">
@@ -31,12 +34,16 @@ const StatusBar = () => {
         <div 
           className="status-item go-live-btn" 
           onClick={handleGoLive}
-          style={{ cursor: 'pointer', color: '#60a5fa', transition: 'color 0.2s' }}
-          onMouseOver={(e) => e.currentTarget.style.color = '#93c5fd'}
-          onMouseOut={(e) => e.currentTarget.style.color = '#60a5fa'}
+          style={{ 
+            cursor: isInstalling ? 'not-allowed' : 'pointer', 
+            color: isInstalling ? '#9ca3af' : '#60a5fa', 
+            transition: 'color 0.2s' 
+          }}
+          onMouseOver={(e) => { if (!isInstalling) e.currentTarget.style.color = '#93c5fd'; }}
+          onMouseOut={(e) => { if (!isInstalling) e.currentTarget.style.color = '#60a5fa'; }}
         >
-          <Radio size={14} />
-          <span>Go Live</span>
+          {isInstalling ? <Loader2 size={14} className="animate-spin" /> : <Radio size={14} />}
+          <span>{isInstalling ? 'Installing...' : 'Go Live'}</span>
         </div>
         <div className="status-item">
           <CheckCircle2 size={14} className="success-icon" />

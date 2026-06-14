@@ -7,7 +7,7 @@ import { FaGithub } from "react-icons/fa";
 import { SiGitlab } from "react-icons/si";
 import { IoLogoBitbucket } from "react-icons/io";
 import { getGithubReposAPI, createProject, startSandbox } from '../services/api';
-import { setActiveProject, setSandboxId } from '../redux/slices/projectSlice';
+import { setActiveProject, setSandboxId, setSandboxStatus } from '../redux/slices/projectSlice';
 import Header from '../components/Header';
 // import '../styles/pages/_connectRepo.scss';
 
@@ -77,18 +77,22 @@ const ConnectRepo = () => {
       const data = await createProject(finalTitle, repoUrl, installCmd, startCmd, port);
       if (data && data.project) {
         // Start Sandbox immediately
+        dispatch(setSandboxStatus('creating'));
         const startData = await startSandbox(data.project._id);
         if (startData && startData.sandboxId) {
           dispatch(setActiveProject(data.project));
           dispatch(setSandboxId(startData.sandboxId));
+          dispatch(setSandboxStatus('installing'));
           navigate('/ide');
         } else {
           // Fallback to dashboard if sandbox start fails but project creates
+          dispatch(setSandboxStatus('idle'));
           navigate('/');
         }
       }
     } catch (error) {
       console.error("Failed to connect project", error);
+      dispatch(setSandboxStatus('idle'));
       setErrorMsg("Failed to import repository. Ensure it is public or you have the correct permissions.");
       setConnecting(false);
     }

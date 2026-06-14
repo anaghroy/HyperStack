@@ -8,31 +8,30 @@ export async function createPod(sandboxId, githubUrl = "", installCmd = "", star
   let mainCommand = `cd /workspace && npm run dev -- --host 0.0.0.0`;
   if (githubUrl) {
     if (startCmd) {
-      const install = installCmd ? installCmd : "npm install";
-      mainCommand = `cd /workspace && PORT=${port} ${install} && PORT=${port} ${startCmd} || tail -f /dev/null`;
+      const install = installCmd ? installCmd : "npm install --legacy-peer-deps";
+      mainCommand = `cd /workspace && export PORT=${port} && export HOST=0.0.0.0 && ${install} && ${startCmd} || tail -f /dev/null`;
     } else {
       mainCommand = `
         cd /workspace
         
         if [ ! -f "package.json" ]; then
-          if [ -f "frontend/package.json" ]; then
-            cd frontend
-          elif [ -f "client/package.json" ]; then
-            cd client
-          elif [ -f "web/package.json" ]; then
-            cd web
-          fi
+          for dir in frontend Frontend client Client web Web; do
+            if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
+              cd "$dir"
+              break
+            fi
+          done
         fi
 
         if [ -f "package.json" ]; then
           if grep -q '"vite"' package.json; then
-            PORT=${port} npm install && PORT=${port} npm run dev -- --host 0.0.0.0 --port ${port} || tail -f /dev/null
+            PORT=${port} npm install --legacy-peer-deps && PORT=${port} npm run dev -- --host 0.0.0.0 --port ${port} || tail -f /dev/null
           elif grep -q '"next"' package.json; then
-            PORT=${port} npm install && PORT=${port} npm run dev || tail -f /dev/null
+            PORT=${port} npm install --legacy-peer-deps && PORT=${port} npm run dev -- -H 0.0.0.0 -p ${port} || tail -f /dev/null
           elif grep -q '"react-scripts"' package.json; then
-            PORT=${port} npm install && PORT=${port} npm start || tail -f /dev/null
+            PORT=${port} HOST=0.0.0.0 npm install --legacy-peer-deps && PORT=${port} HOST=0.0.0.0 npm start || tail -f /dev/null
           else
-            PORT=${port} npm install && PORT=${port} npm start || tail -f /dev/null
+            PORT=${port} HOST=0.0.0.0 npm install --legacy-peer-deps && PORT=${port} HOST=0.0.0.0 npm start || tail -f /dev/null
           fi
         else
           tail -f /dev/null

@@ -1,18 +1,17 @@
 import { useEffect } from 'react';
 import { io } from 'socket.io-client';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 import { API_BASE } from '../services/api';
+import { setSandboxStatus } from '../redux/slices/projectSlice';
 
 const SocketListener = () => {
   const { user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (!user) return;
 
-    // Use window.location.host for production/preview routing if needed
-    // Assuming API_BASE is the root origin handling the ingress route
-    // Since ingress maps /api/notification to port 4000
     const socket = io(API_BASE, {
       path: '/socket.io', // default path
       query: { userId: user._id }
@@ -27,13 +26,19 @@ const SocketListener = () => {
         duration: 5000,
         icon: '🔔',
       });
+      
+      if (data.type === 'SANDBOX_READY') {
+        dispatch(setSandboxStatus('ready'));
+      }
+      
       window.dispatchEvent(new CustomEvent('new_notification', { detail: data }));
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [user]);
+  }, [user, dispatch]);
+
 
   return null;
 };

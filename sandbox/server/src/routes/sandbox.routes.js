@@ -1,4 +1,5 @@
 import express from "express";
+import net from "net";
 import { createPod } from "../kubernetes/pod.js";
 import { createService } from "../kubernetes/service.js";
 import { v7 as uuid } from "uuid";
@@ -9,6 +10,46 @@ import { sendNotification } from "../config/mq.js";
 import mongoose from "mongoose";
 
 const router = express.Router();
+
+async function probeSandboxReadiness(podIp, port, userId, projectTitle) {
+  const maxAttempts = 60; // 2 mins max
+  const delayMs = 2000;
+
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      await new Promise((resolve, reject) => {
+        const socket = new net.Socket();
+        socket.setTimeout(1000);
+        socket.connect(port, podIp, () => {
+          socket.destroy();
+          resolve();
+        });
+        socket.on('error', (err) => {
+          socket.destroy();
+          reject(err);
+        });
+        socket.on('timeout', () => {
+          socket.destroy();
+          reject(new Error('timeout'));
+        });
+      });
+      
+      // If we reach here, connection was successful
+      await sendNotification({
+        type: "SANDBOX_READY",
+        userId: userId,
+        message: `Your sandbox environment '${projectTitle}' is ready to go live!`
+      });
+      return;
+    } catch (err) {
+      // Expected failure while installing, wait and retry
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  
+  // If we reach here, it failed to start after maxAttempts
+  console.log(`Probe failed for ${podIp}:${port}`);
+}
 
 router.get("/health", (req, res) => {
   res.status(200).json({
@@ -67,12 +108,15 @@ router.post("/start", authMiddleware, async (req, res) => {
     // Save mapping to Redis
     await createSandboxKey(sandboxId, podIp, project.port);
 
-    // Dispatch real-time notification
+    // Dispatch initial notification
     await sendNotification({
         type: "APP_NOTIFICATION",
         userId: req.user.id,
-        message: `Your sandbox environment '${project.title}' is ready!`
+        message: `Sandbox created! Installing dependencies for '${project.title}'...`
     });
+
+    // Start background readiness probe
+    probeSandboxReadiness(podIp, project.port, req.user.id, project.title);
 
     return res.status(201).json({
       message: "Sandbox environment created successfully",
