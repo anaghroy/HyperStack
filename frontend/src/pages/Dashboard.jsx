@@ -8,6 +8,7 @@ import { Plus, Folder, Loader2, Search, LogOut, Trash2, LayoutDashboard, Users, 
 import { useDebounce } from '../hooks/useDebounce';
 import Header from '../components/Header';
 import SharedProjectCard from '../components/SharedProjectCard';
+import Overview from './Overview';
 
 const Dashboard = () => {
   const dispatch = useDispatch();
@@ -22,7 +23,7 @@ const Dashboard = () => {
   const [sharedProjects, setSharedProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startingProjectId, setStartingProjectId] = useState(null);
-  const [viewMode, setViewMode] = useState('owned'); // 'owned' or 'shared'
+  const [viewMode, setViewMode] = useState('overview'); // 'overview', 'owned' or 'shared'
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -209,7 +210,7 @@ const Dashboard = () => {
       <div className="dashboard-body">
         <aside className="sidebar">
           <nav className="sidebar-nav">
-          <div className="nav-item">
+          <div className={`nav-item ${viewMode === 'overview' ? 'active' : ''}`} onClick={() => setViewMode('overview')}>
             <LayoutDashboard size={18} />
             <span>Overview</span>
           </div>
@@ -236,52 +237,56 @@ const Dashboard = () => {
         </aside>
 
         <main className="dashboard-content">
-          <div className="content-header">
-            <div className="title-section">
-              <h1>{viewMode === 'owned' ? 'My Projects' : 'Shared With Me'}</h1>
-              <p>{viewMode === 'owned' ? 'Manage and organize your AI code projects.' : 'Projects you are collaborating on.'}</p>
-            </div>
-            {viewMode === 'owned' && (
-              <div className="header-actions">
-                <button className="secondary-btn" onClick={() => navigate('/connect-repo')}>
-                  <LinkIcon size={16} />
-                  <span>Connect Repo</span>
-                </button>
-                <button className="primary-btn" onClick={() => setIsCreating(true)}>
-                  <Plus size={18} />
-                  <span>Create New Project</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="projects-grid">
-            {loading && !isCreating && currentList.length === 0 ? (
-              <div className="loading-state">
-                <Loader2 size={32} className="spin" />
-              </div>
-            ) : currentList.length === 0 ? (
-              <div className="empty-state">
-                {viewMode === 'owned' ? (
-                  <>
-                    <Folder size={48} />
-                    <h3>No projects yet</h3>
-                    <p>Create your first project to get started.</p>
-                    <button className="primary-btn mt-4" onClick={() => setIsCreating(true)}>
-                      Create Project
+          {viewMode === 'overview' ? (
+            <Overview />
+          ) : (
+            <>
+              <div className="content-header">
+                <div className="title-section">
+                  <h1>{viewMode === 'owned' ? 'My Projects' : 'Shared With Me'}</h1>
+                  <p>{viewMode === 'owned' ? 'Manage and organize your AI code projects.' : 'Projects you are collaborating on.'}</p>
+                </div>
+                {viewMode === 'owned' && (
+                  <div className="header-actions">
+                    <button className="secondary-btn" onClick={() => navigate('/connect-repo')}>
+                      <LinkIcon size={16} />
+                      <span>Connect Repo</span>
                     </button>
-                  </>
-                ) : (
-                  <>
-                    <Users size={48} />
-                    <h3>No shared projects</h3>
-                    <p>When someone shares a project with you, it will appear here.</p>
-                  </>
+                    <button className="primary-btn" onClick={() => setIsCreating(true)}>
+                      <Plus size={18} />
+                      <span>Create New Project</span>
+                    </button>
+                  </div>
                 )}
               </div>
-            ) : filteredProjects.length === 0 ? (
-              <div className="empty-state" style={{ gridColumn: '1 / -1', padding: '40px' }}>
-                <Search size={48} style={{ opacity: 0.5, marginBottom: '16px' }} />
+
+              <div className="projects-grid">
+                {loading && !isCreating && currentList.length === 0 ? (
+                  <div className="loading-state">
+                    <Loader2 size={32} className="spin" />
+                  </div>
+                ) : currentList.length === 0 ? (
+                  <div className="empty-state">
+                    {viewMode === 'owned' ? (
+                      <>
+                        <Folder size={48} />
+                        <h3>No projects yet</h3>
+                        <p>Create your first project to get started.</p>
+                        <button className="primary-btn mt-4" onClick={() => setIsCreating(true)}>
+                          Create Project
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Users size={48} />
+                        <h3>No shared projects</h3>
+                        <p>When someone shares a project with you, it will appear here.</p>
+                      </>
+                    )}
+                  </div>
+                ) : filteredProjects.length === 0 ? (
+                  <div className="empty-state" style={{ gridColumn: '1 / -1', padding: '40px' }}>
+                    <Search size={48} style={{ opacity: 0.5, marginBottom: '16px' }} />
                 <h3>No matching projects found</h3>
                 <p>We couldn't find any projects matching "{searchQuery}"</p>
               </div>
@@ -329,6 +334,8 @@ const Dashboard = () => {
               ))
             )}
           </div>
+          </>
+        )}
         </main>
       </div>
 

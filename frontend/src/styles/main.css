@@ -862,6 +862,30 @@ body {
   word-break: break-word;
   overflow-wrap: break-word;
 }
+.ai-chat-panel .chat-history .message .message-content .tool-execution-status {
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin: 6px 0;
+}
+.ai-chat-panel .chat-history .message .message-content .tool-execution-status:first-child {
+  margin-top: 0;
+}
+.ai-chat-panel .chat-history .message .message-content .tool-execution-status:last-child {
+  margin-bottom: 0;
+}
+.ai-chat-panel .chat-history .message .message-content .tool-execution-status {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ai-chat-panel .chat-history .message .message-content .tool-execution-status .tool-icon {
+  color: var(--color-primary);
+}
 .ai-chat-panel .chat-input-area {
   padding: 16px;
   background-color: var(--color-surface);
@@ -3088,7 +3112,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #0b0c10;
+  background-color: #080808;
   color: #c5c6c7;
   font-family: "Inter", sans-serif;
 }

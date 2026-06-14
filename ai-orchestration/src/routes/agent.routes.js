@@ -50,7 +50,14 @@ agentRouter.post("/invoke", async (req, res) => {
       Connection: "keep-alive",
     });
 
-    const writer = (text) => res.write(text);
+    let requestAborted = false;
+    req.on('close', () => {
+      requestAborted = true;
+    });
+
+    const writer = (text) => {
+      if (!requestAborted) res.write(text);
+    };
     
     // Fetch existing chat history for this project
     let chatDoc = await ChatHistory.findOne({ projectId });
@@ -75,17 +82,19 @@ agentRouter.post("/invoke", async (req, res) => {
 
     const fullAiResponse = response.content;
     const tokens = response.tokens || 100; // Fallback estimate if token usage isn't present
-    await trackTokenUsage(req.user.id || req.user._id, tokens);
+    
+    if (!requestAborted) {
+      await trackTokenUsage(req.user.id || req.user._id, tokens);
 
-    // Stream has already been written via writer; no need to send full response again
+      // Stream has already been written via writer; no need to send full response again
 
+      // Save to DB
+      chatDoc.messages.push({ role: "user", content: message });
+      chatDoc.messages.push({ role: "ai", content: fullAiResponse });
+      await chatDoc.save();
 
-    // Save to DB
-    chatDoc.messages.push({ role: "user", content: message });
-    chatDoc.messages.push({ role: "ai", content: fullAiResponse });
-    await chatDoc.save();
-
-    res.end();
+      res.end();
+    }
   } catch (error) {
     console.error(error);
     if (res.headersSent) {
@@ -97,6 +106,19 @@ agentRouter.post("/invoke", async (req, res) => {
         error: error.message,
       });
     }
+  }
+});
+
+agentRouter.get("/history/:projectId", async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const chatDoc = await ChatHistory.findOne({ projectId });
+    if (!chatDoc) {
+      return res.status(200).json({ messages: [] });
+    }
+    return res.status(200).json({ messages: chatDoc.messages });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 });
 

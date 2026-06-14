@@ -439,17 +439,29 @@ export const deleteItem = async (filename) => {
   }
 };
 
-export const invokeAI = async (message, projectId) => {
+export const invokeAI = async (message, projectId, signal) => {
   try {
     const res = await apiFetch(`${API_BASE}/api/ai/invoke`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ message, projectId })
+      body: JSON.stringify({ message, projectId }),
+      signal
     });
-    return res; // stream response
+    return res;
   } catch (error) {
     console.error('Failed to invoke AI:', error);
+    throw error;
+  }
+};
+
+export const getChatHistoryAPI = async (projectId) => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/ai/history/${projectId}`, { credentials: 'include' });
+    if (!res.ok) throw new Error("Failed to fetch chat history");
+    return await res.json();
+  } catch (error) {
+    console.error('getChatHistoryAPI error:', error);
     throw error;
   }
 };

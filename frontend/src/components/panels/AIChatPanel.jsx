@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Sparkles, FileCode } from 'lucide-react';
-import { invokeAI, getSandboxId, explainCodeAPI } from '../../services/api';
+import { X, Send, Sparkles, FileCode, CircleStop, History, ChevronDown, ChevronRight } from 'lucide-react';
+import { invokeAI, getSandboxId, explainCodeAPI, getChatHistoryAPI } from '../../services/api';
 import { useSelector, useDispatch } from 'react-redux';
 import { setAiInitialMessage, setAiExplainRequest } from '../../redux/slices/projectSlice';
 
@@ -10,6 +10,9 @@ const AIChatPanel = ({ onClose, width, onStartResize }) => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [abortController, setAbortController] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [expandedHistoryIdx, setExpandedHistoryIdx] = useState(null);
   const chatEndRef = useRef(null);
   
   const dispatch = useDispatch();
@@ -21,7 +24,43 @@ const AIChatPanel = ({ onClose, width, onStartResize }) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, showHistory, expandedHistoryIdx]);
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const projectId = getSandboxId();
+        if (!projectId) return;
+        const history = await getChatHistoryAPI(projectId);
+        if (history && history.messages && history.messages.length > 0) {
+          setMessages([
+            { role: 'ai', content: 'Hi! I am your HyperStack AI assistant. How can I help you today?' },
+            ...history.messages
+          ]);
+        }
+      } catch (e) {
+        console.error("Failed to load history", e);
+      }
+    };
+    loadHistory();
+  }, []);
+
+  const handleStop = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+      setIsGenerating(false);
+      
+      setMessages(prev => {
+        // Find the last user message
+        const lastUserMsg = prev.slice().reverse().find(m => m.role === 'user');
+        if (lastUserMsg) setInputValue(lastUserMsg.content);
+        
+        // Remove the last user message and the partial AI response
+        return prev.slice(0, prev.length - 2);
+      });
+    }
+  };
 
   const handleSend = async (overrideMessage = null) => {
     const messageToSend = typeof overrideMessage === 'string' ? overrideMessage : inputValue;
@@ -31,11 +70,14 @@ const AIChatPanel = ({ onClose, width, onStartResize }) => {
     setMessages(prev => [...prev, { role: 'user', content: messageToSend }, { role: 'ai', content: '' }]);
     setIsGenerating(true);
 
+    const controller = new AbortController();
+    setAbortController(controller);
+
     try {
       const projectId = getSandboxId();
       if (!projectId) throw new Error("Sandbox not running");
       
-      const res = await invokeAI(messageToSend, projectId);
+      const res = await invokeAI(messageToSend, projectId, controller.signal);
       
       if (!res.body) throw new Error("No response body");
 
@@ -49,9 +91,6 @@ const AIChatPanel = ({ onClose, width, onStartResize }) => {
         if (value) {
           const chunk = decoder.decode(value, { stream: true });
           
-          // Basic SSE parsing: parse "data: ..." from chunk if it's SSE format
-          // If the server just sends raw text streams, we just append it.
-          // Let's assume standard SSE or raw text.
           const lines = chunk.split('\n');
           let textToAdd = '';
           lines.forEach(line => {
@@ -87,14 +126,19 @@ const AIChatPanel = ({ onClose, width, onStartResize }) => {
         }
       }
     } catch (error) {
-      console.error("AI chat error:", error);
-      setMessages(prev => {
-        const newMessages = [...prev];
-        newMessages[newMessages.length - 1].content += "\n\n[Error communicating with AI]";
-        return newMessages;
-      });
+      if (error.name === 'AbortError') {
+        console.log('Generation stopped by user');
+      } else {
+        console.error('AI invocation failed:', error);
+        setMessages(prev => {
+          const newMessages = [...prev];
+          newMessages[newMessages.length - 1].content += "\n\n[Error communicating with AI]";
+          return newMessages;
+        });
+      }
     } finally {
       setIsGenerating(false);
+      setAbortController(null);
     }
   };
 
@@ -181,19 +225,60 @@ const AIChatPanel = ({ onClose, width, onStartResize }) => {
           <Sparkles size={16} color="var(--color-primary)" />
           HyperStack AI
         </div>
-        <X size={16} className="close-icon" onClick={onClose} />
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <History 
+            size={16} 
+            className="history-icon" 
+            style={{ cursor: 'pointer', color: showHistory ? 'var(--color-primary)' : 'inherit' }}
+            onClick={() => setShowHistory(!showHistory)} 
+            title="Chat History"
+          />
+          <X size={16} className="close-icon" onClick={onClose} />
+        </div>
       </div>
       
-      <div className="chat-history">
-        {messages.map((msg, idx) => (
-          <div key={idx} className={`message ${msg.role}`}>
-            <div className="message-content">
-              {renderMessageContent(msg.content)}
+      {showHistory ? (
+        <div className="chat-history-overlay" style={{ flex: 1, overflowY: 'auto', padding: '15px', backgroundColor: 'var(--bg-panel)' }}>
+          <h3 style={{ marginBottom: '15px', fontSize: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>Conversation History</h3>
+          {messages.filter(m => m.role === 'user').map((msg, idx) => {
+            const isExpanded = expandedHistoryIdx === idx;
+            // Find the corresponding AI response
+            const aiResponseIndex = messages.indexOf(msg) + 1;
+            const aiResponse = messages[aiResponseIndex] && messages[aiResponseIndex].role === 'ai' ? messages[aiResponseIndex] : null;
+            
+            return (
+              <div key={idx} className="history-item" style={{ marginBottom: '10px', border: '1px solid var(--border-color)', borderRadius: '6px', overflow: 'hidden' }}>
+                <div 
+                  className="history-prompt" 
+                  style={{ padding: '10px', backgroundColor: 'var(--bg-secondary)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  onClick={() => setExpandedHistoryIdx(isExpanded ? null : idx)}
+                >
+                  <div style={{ fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '85%' }}>
+                    {msg.content}
+                  </div>
+                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </div>
+                {isExpanded && aiResponse && (
+                  <div className="history-response" style={{ padding: '10px', fontSize: '13px', backgroundColor: 'var(--bg-panel)', borderTop: '1px solid var(--border-color)' }}>
+                    {renderMessageContent(aiResponse.content)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="chat-history">
+          {messages.map((msg, idx) => (
+            <div key={idx} className={`message ${msg.role}`}>
+              <div className="message-content">
+                {renderMessageContent(msg.content)}
+              </div>
             </div>
-          </div>
-        ))}
-        <div ref={chatEndRef} />
-      </div>
+          ))}
+          <div ref={chatEndRef} />
+        </div>
+      )}
 
       <div className="chat-input-area">
         <div className="input-wrapper">
@@ -210,13 +295,24 @@ const AIChatPanel = ({ onClose, width, onStartResize }) => {
               e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
             }}
           />
-          <button 
-            className="send-btn" 
-            onClick={handleSend}
-            disabled={!inputValue.trim() || isGenerating}
-          >
-            <Send size={16} />
-          </button>
+          {isGenerating ? (
+            <button 
+              className="stop-btn" 
+              onClick={handleStop}
+              title="Stop Generation"
+              style={{ color: '#ff4444', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', padding: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <CircleStop size={18} />
+            </button>
+          ) : (
+            <button 
+              className="send-btn" 
+              onClick={handleSend}
+              disabled={!inputValue.trim()}
+            >
+              <Send size={16} />
+            </button>
+          )}
         </div>
       </div>
     </div>
