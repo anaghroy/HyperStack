@@ -22,7 +22,7 @@ const checkTokenLimit = async (req, res, next) => {
     const userId = req.user.id || req.user._id;
     const date = new Date().toISOString().split('T')[0];
     const usage = await TokenUsage.findOne({ userId, date });
-    const DAILY_LIMIT = 50000;
+    const DAILY_LIMIT = 500000;
     
     if (usage && usage.tokensUsed >= DAILY_LIMIT) {
       return res.status(429).json({ error: "Daily token limit exceeded" });
@@ -181,12 +181,47 @@ Do not add any additional explanation or conversational text.`;
 
     const userPrompt = `Generate a ${orm} schema and Mermaid ER diagram for the following requirements:\n${prompt}`;
 
-    const response = await model.invoke([
+    const messages = [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt }
-    ]);
+    ];
 
-    let responseText = response.content.trim();
+    let responseText = "";
+    let finalTokens = 300;
+
+    try {
+      console.log(`Calling DB Schema Model: ${modelName}`);
+      const response = await model.invoke(messages);
+      responseText = response.content.trim();
+      finalTokens = response.tokens || 300;
+    } catch (primaryErr) {
+      console.warn(`Primary DB model (${modelName}) failed:`, primaryErr.message);
+      
+      const dbFallbackModels = ["cohere", "mistral", "deepseek", "qwen", "minimax"];
+      let success = false;
+      
+      for (const fallback of dbFallbackModels) {
+        if (fallback === modelName) continue;
+        
+        try {
+          console.log(`Trying fallback DB model: ${fallback}`);
+          const fbModel = getModel(fallback);
+          const fbResponse = await fbModel.invoke(messages);
+          responseText = fbResponse.content.trim();
+          finalTokens = fbResponse.tokens || 300;
+          success = true;
+          console.log(`${fallback} successfully generated DB schema!`);
+          break;
+        } catch (fbErr) {
+          console.warn(`${fallback} fallback failed:`, fbErr.message);
+        }
+      }
+      
+      if (!success) {
+        throw new Error("All AI models failed to generate DB schema.");
+      }
+    }
+
     // In case the LLM outputs markdown block for JSON, clean it
     if (responseText.startsWith("```json")) {
       responseText = responseText.replace(/^```json\n/, "").replace(/\n```$/, "");
@@ -194,15 +229,46 @@ Do not add any additional explanation or conversational text.`;
     
     let parsedData;
     try {
-      parsedData = JSON.parse(responseText);
+      // Forcefully extract JSON if wrapped in conversational text
+      let jsonContent = responseText;
+      const firstBrace = jsonContent.indexOf('{');
+      const lastBrace = jsonContent.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        jsonContent = jsonContent.substring(firstBrace, lastBrace + 1);
+      }
+      parsedData = JSON.parse(jsonContent);
     } catch (parseError) {
-      console.error("Failed to parse DB schema JSON:", responseText);
-      return res.status(500).json({ error: "LLM returned invalid JSON" });
+      console.warn("Failed to parse DB schema JSON, attempting manual markdown extraction...");
+      
+      // Fallback: The AI ignored JSON instructions and just sent markdown blocks
+      const mermaidMatch = responseText.match(/```mermaid([\s\S]*?)```/i);
+      const mermaidStr = mermaidMatch ? mermaidMatch[1].trim() : "";
+      
+      // Try to find the DB code block (ignoring mermaid/json)
+      const codeMatches = [...responseText.matchAll(/```(\w*)([\s\S]*?)```/gi)];
+      let codeStr = "";
+      for (const match of codeMatches) {
+        const lang = (match[1] || "").toLowerCase();
+        if (lang !== "mermaid" && lang !== "json") {
+            codeStr = match[2].trim();
+            break;
+        }
+      }
+      
+      // If we couldn't find code blocks, fail
+      if (!codeStr && !mermaidStr) {
+        console.error("Total parse failure. Raw text:", responseText);
+        return res.status(500).json({ error: "LLM returned invalid format" });
+      }
+      
+      parsedData = {
+        code: codeStr || "// Schema could not be extracted",
+        mermaid: mermaidStr || "erDiagram\n    ERROR ||--o{ ERROR : missing_diagram"
+      };
     }
 
     // Track tokens
-    const tokens = response.tokens || 300;
-    await trackTokenUsage(req.user.id || req.user._id, tokens);
+    await trackTokenUsage(req.user.id || req.user._id, finalTokens);
 
     res.status(200).json(parsedData);
   } catch (error) {
@@ -459,20 +525,159 @@ Analyze these files and return the JSON architecture graph.`;
       return res.status(200).json(JSON.parse(cachedArch));
     }
 
-    const structuredModel = llamaModel.withStructuredOutput(architectureSchema, { name: "architecture" });
-    const response = await structuredModel.invoke(prompt);
+    let response;
+    let usedAiTokens = 0;
+    
+    const manualPrompt = prompt + `\n\nCRITICAL INSTRUCTION: You must respond ONLY with raw, valid JSON. Do not use markdown code blocks (e.g. \`\`\`json). Your entire response must start with { and end with }. 
+The JSON must strictly follow this schema:
+{
+  "nodes": [ { "id": "file/path.js", "label": "path.js", "type": "component/utility/css/file" } ],
+  "edges": [ { "source": "file/path.js", "target": "imported/file.js", "label": "imports" } ]
+}
+Do not include any explanations. Keep the output as compact as possible.`;
+
+    try {
+      console.log("Calling Cohere (Primary Model) for architecture extraction...");
+      const { cohereModel } = await import("../models/cohere.model.js");
+      
+      const result = await cohereModel.invoke(manualPrompt);
+      let content = result.content || "";
+      content = content.replace(/^```json/m, '').replace(/^```/m, '').replace(/```$/m, '').trim();
+      
+      const firstBrace = content.indexOf('{');
+      const lastBrace = content.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        content = content.substring(firstBrace, lastBrace + 1);
+      }
+      
+      const parsed = JSON.parse(content);
+      response = parsed.architecture || parsed.graph || parsed;
+      
+      if (!response || !Array.isArray(response.nodes) || response.nodes.length === 0) {
+        throw new Error("Missing or empty nodes array");
+      }
+      
+      usedAiTokens = 300 + (files.length * 50);
+      console.log("Cohere successfully generated the architecture graph!");
+    } catch (cohereError) {
+      console.warn("Cohere failed to generate architecture graph:", cohereError.message);
+      let aiSuccess = false;
+      const fallbackModels = ["mistral", "kimi", "deepseek", "minimax"];
+      const { getModel } = await import("../models/index.js");
+      for (const modelName of fallbackModels) {
+        if (aiSuccess) break;
+        try {
+          console.log(`Trying fallback model: ${modelName}`);
+          const currentModel = getModel(modelName);
+          const largeModel = currentModel.bind ? currentModel.bind({ max_tokens: 8192 }) : currentModel;
+          
+          const result = await largeModel.invoke(manualPrompt);
+          let content = result.content || "";
+          
+          content = content.replace(/^```json/m, '').replace(/^```/m, '').replace(/```$/m, '').trim();
+          
+          // Strictly extract the JSON object by finding the first '{' and last '}'
+          const firstBrace = content.indexOf('{');
+          const lastBrace = content.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1) {
+            content = content.substring(firstBrace, lastBrace + 1);
+          }
+          
+          try {
+            const parsed = JSON.parse(content);
+            response = parsed.architecture || parsed.graph || parsed;
+            
+            // Validate that we actually got a nodes array
+            if (response && Array.isArray(response.nodes) && response.nodes.length > 0) {
+              aiSuccess = true;
+            } else {
+              throw new Error("Missing or empty nodes array");
+            }
+          } catch (parseErr) {
+            console.warn(`${modelName} JSON parse/validate failed:`, parseErr.message);
+            
+            // Attempt repair if it's a truncation issue
+            let repaired = content;
+            if (repaired.lastIndexOf(']') < repaired.lastIndexOf('{')) {
+              repaired += '"}]}';
+            } else if (repaired.lastIndexOf('}') < repaired.lastIndexOf('[')) {
+              repaired += ']}';
+            } else if (!repaired.endsWith('}')) {
+              repaired += '}';
+            }
+            
+            try {
+              const repairedParsed = JSON.parse(repaired);
+              response = repairedParsed.architecture || repairedParsed.graph || repairedParsed;
+              if (response && Array.isArray(response.nodes) && response.nodes.length > 0) {
+                aiSuccess = true;
+              }
+            } catch (repairErr) {
+               // Let it fail and try the next model
+            }
+          }
+          
+          if (aiSuccess) {
+            usedAiTokens = 300 + (files.length * 50);
+            console.log(`${modelName} successfully generated the architecture.`);
+          }
+        } catch (fallbackErr) {
+          console.warn(`${modelName} fallback failed:`, fallbackErr.message);
+        }
+      }
+
+      if (!aiSuccess) {
+        console.error("All AI models failed, using Regex fallback parser. Charging 0 tokens.");
+        usedAiTokens = 0; // Regex fallback is free!
+        
+        response = { nodes: [], edges: [] };
+        files.forEach(f => {
+          const label = f.path.split('/').pop();
+          let type = 'file';
+          if (f.path.includes('components')) type = 'component';
+          else if (f.path.includes('utils') || f.path.includes('services')) type = 'utility';
+          else if (f.path.endsWith('.css') || f.path.endsWith('.scss')) type = 'css';
+          
+          response.nodes.push({ id: f.path, label, type });
+          
+          const importRegex = /(?:import|require)[^\n]+['"]([^'"]+)['"]/g;
+          let match;
+          while ((match = importRegex.exec(f.content)) !== null) {
+            const importPath = match[1];
+            
+            // Skip standard node_modules (if it doesn't start with . or / or @)
+            if (!importPath.startsWith('.') && !importPath.startsWith('/') && !importPath.startsWith('@')) continue;
+
+            // Extract the base filename (e.g., './components/App' -> 'App')
+            const targetName = importPath.split('/').pop().replace(/\.(js|jsx|ts|tsx)$/, '');
+            
+            // Fuzzy match the node by label
+            const targetNode = response.nodes.find(n => n.label.toLowerCase().startsWith(targetName.toLowerCase()));
+            
+            if (targetNode) {
+              response.edges.push({ source: f.path, target: targetNode.id, label: 'imports' });
+            }
+          }
+        });
+      }
+    }
 
     // Cache the response
     await redisClient.setex(cacheKey, 86400, JSON.stringify(response));
 
-    // Track tokens
-    const tokens = 300 + (files.length * 50); // estimate since structured output might not expose tokens easily
-    await trackTokenUsage(req.user.id || req.user._id, tokens);
+    // Track tokens only if AI was used
+    if (usedAiTokens > 0) {
+      await trackTokenUsage(req.user.id || req.user._id, usedAiTokens);
+    }
 
     return res.status(200).json(response);
   } catch (error) {
     console.error("Architecture extraction error:", error);
-    return res.status(500).json({ error: "Failed to extract architecture" });
+    return res.status(500).json({ 
+      error: "Failed to extract architecture", 
+      details: error.message,
+      stack: error.stack 
+    });
   }
 });
 

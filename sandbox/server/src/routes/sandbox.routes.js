@@ -12,7 +12,7 @@ import mongoose from "mongoose";
 const router = express.Router();
 
 async function probeSandboxReadiness(podIp, port, userId, projectTitle) {
-  const maxAttempts = 60; // 2 mins max
+  const maxAttempts = 120; // 4 mins max
   const delayMs = 2000;
 
   for (let i = 0; i < maxAttempts; i++) {
@@ -49,6 +49,13 @@ async function probeSandboxReadiness(podIp, port, userId, projectTitle) {
   
   // If we reach here, it failed to start after maxAttempts
   console.log(`Probe failed for ${podIp}:${port}`);
+  
+  // Send SANDBOX_READY anyway so the IDE UI unlocks, with a warning
+  await sendNotification({
+    type: "SANDBOX_READY",
+    userId: userId,
+    message: `Sandbox '${projectTitle}' setup timed out. The server might have failed to start. Please check the terminal!`
+  });
 }
 
 router.get("/health", (req, res) => {

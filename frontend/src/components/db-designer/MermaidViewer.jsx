@@ -41,6 +41,14 @@ const MermaidViewer = ({ chart }) => {
         }
       } catch (err) {
         console.error("Mermaid parsing error:", err);
+        
+        // Mermaid automatically appends error SVGs to the document body if parsing fails
+        // We must manually clean it up to prevent vertical scrollbars and stray error text
+        const errorNode = document.getElementById(id);
+        if (errorNode) {
+          errorNode.remove();
+        }
+        
         if (isMounted) {
           setError("Failed to render diagram. The generated syntax might be invalid.");
           setSvgContent('');

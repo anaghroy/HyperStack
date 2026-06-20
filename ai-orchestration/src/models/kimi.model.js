@@ -13,5 +13,5 @@ export const kimiModel = new ChatOpenAI({
   },
   temperature: 0.7,
   maxRetries: 0,
-  timeout: 10000
+  timeout: 120000
 });

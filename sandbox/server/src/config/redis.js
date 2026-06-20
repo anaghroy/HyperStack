@@ -35,8 +35,12 @@ subscriber.subscribe("__keyevent@0__:expired", (err, count) => {
 
 subscriber.on("message", async (channel, key) => {
   const sandboxId = key.split(":")[1];
-  // Delete the associated Kubernetes resources
-  await deletePod(sandboxId);
+  try {
+    // Delete the associated Kubernetes resources
+    await deletePod(sandboxId);
+  } catch (error) {
+    console.error(`Failed to delete expired pod for sandbox ${sandboxId}:`, error.message);
+  }
 });
 
 export default { subscriber };

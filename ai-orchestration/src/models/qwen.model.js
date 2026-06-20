@@ -12,5 +12,5 @@ export const qwenModel = new ChatOpenAI({
   },
   temperature: 0.7,
   maxRetries: 0,
-  timeout: 10000
+  timeout: 60000
 });

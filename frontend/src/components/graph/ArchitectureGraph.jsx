@@ -96,8 +96,12 @@ const ArchitectureGraph = () => {
               if (data && data.files && data.files.length > 0) {
                 content = data.files[0][file.startsWith('/') ? file : '/' + file] || data.files[0][file] || "";
               }
-              // Limit content to top 20 lines (where imports usually are) to save tokens and payload size
-              content = content.split('\n').slice(0, 20).join('\n');
+              // Extract only import/require lines to drastically save LLM tokens
+              const importLines = content.split('\n').filter(line => {
+                const t = line.trim();
+                return t.startsWith('import ') || t.includes('require(') || t.startsWith('export ');
+              });
+              content = importLines.slice(0, 30).join('\n');
               filesWithContent.push({ path: file, content });
             } catch (e) {
               console.error(`Failed to read file ${file}:`, e);
@@ -108,15 +112,15 @@ const ArchitectureGraph = () => {
 
       const graphData = await getArchitectureGraph(filesWithContent);
       
-      const initialNodes = graphData.nodes.map(n => ({
-        id: n.id,
+      const initialNodes = (graphData.nodes || []).map((n, idx) => ({
+        id: n.id || n.label || `node-${idx}`,
         type: 'custom',
-        data: { label: n.label, type: n.type },
+        data: { label: n.label || 'Unknown', type: n.type || 'file' },
         position: { x: 0, y: 0 }
       }));
       
-      const initialEdges = graphData.edges.map((e, idx) => ({
-        id: `e${idx}`,
+      const initialEdges = (graphData.edges || []).map((e, idx) => ({
+        id: `e-${idx}`,
         source: e.source,
         target: e.target,
         type: 'smoothstep',

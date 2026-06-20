@@ -9,5 +9,5 @@ export const cohereModel = new ChatCohere({
   apiKey: process.env.COHERE_API_KEY,
   temperature: 0.7,
   maxRetries: 0,
-  timeout: 10000
+  timeout: 60000
 });

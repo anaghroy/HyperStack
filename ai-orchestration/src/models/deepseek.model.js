@@ -12,5 +12,5 @@ export const deepseekModel = new ChatOpenAI({
   },
   temperature: 0.7,
   maxRetries: 0,
-  timeout: 15000,
+  timeout: 60000,
 });

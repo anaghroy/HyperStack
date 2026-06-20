@@ -268,7 +268,7 @@ export const generateDbSchemaAPI = async (prompt, orm) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ prompt, orm, modelName: 'llama' })
+      body: JSON.stringify({ prompt, orm, modelName: 'kimi' })
     });
     
     if (!res.ok) {
@@ -534,7 +534,10 @@ export const getArchitectureGraph = async (files) => {
       credentials: 'include',
       body: JSON.stringify({ files })
     });
-    if (!res.ok) throw new Error("Failed to fetch architecture graph");
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(`Failed to fetch architecture graph: ${errData.details || res.statusText}`);
+    }
     return await res.json();
   } catch (error) {
     console.error('Failed to get architecture graph:', error);
