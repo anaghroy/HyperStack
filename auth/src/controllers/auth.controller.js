@@ -349,37 +349,11 @@ export const getCurrentUser = async (req, res) => {
 };
 
 /**
- * Updates the current authenticated user's webhook URL.
- */
-export const updateWebhook = async (req, res) => {
-  try {
-    const { webhookUrl } = req.body;
-
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { webhookUrl },
-      { new: true }
-    ).select("-__v");
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.status(200).json({ message: "Webhook URL updated successfully", user });
-  } catch (error) {
-    console.error("Error in updateWebhook:", error);
-    return res
-      .status(500)
-      .json({ message: "Internal server error" });
-  }
-};
-
-/**
  * Updates the user's profile details and avatar.
  */
 export const updateProfile = async (req, res) => {
   try {
-    const { name, location, city, dob, bio, webhookUrl } = req.body;
+    const { name, location, city, dob, bio } = req.body;
     
     if (bio && bio.length > 200) {
       return res.status(400).json({ message: "Bio must be at most 200 characters long." });
@@ -410,7 +384,7 @@ export const updateProfile = async (req, res) => {
     if (city !== undefined) user.city = city;
     if (dob !== undefined) user.dob = dob;
     if (bio !== undefined) user.bio = bio;
-    if (webhookUrl !== undefined) user.webhookUrl = webhookUrl;
+
 
     await user.save();
     return res.status(200).json({ message: "Profile updated successfully", user });
@@ -425,7 +399,7 @@ export const updateProfile = async (req, res) => {
  */
 export const updatePreferences = async (req, res) => {
   try {
-    const { twoFactorEnabled, emailNotifications, webhookUrl } = req.body;
+    const { twoFactorEnabled, emailNotifications } = req.body;
 
     let user = await User.findById(req.user.id).select("-__v");
     if (!user) {
@@ -434,7 +408,7 @@ export const updatePreferences = async (req, res) => {
 
     if (twoFactorEnabled !== undefined) user.twoFactorEnabled = twoFactorEnabled;
     if (emailNotifications !== undefined) user.emailNotifications = emailNotifications;
-    if (webhookUrl !== undefined) user.webhookUrl = webhookUrl;
+
 
     await user.save();
     return res.status(200).json({ message: "Preferences updated successfully", user });

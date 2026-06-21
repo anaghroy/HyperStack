@@ -20,6 +20,11 @@ const projectSlice = createSlice({
       state.sandboxId = action.payload;
     },
     setSandboxStatus: (state, action) => {
+      // Prevent race condition: Socket.io SANDBOX_READY event can arrive before the HTTP response 
+      // resolves in ConnectRepo/Dashboard. If it's already ready, don't revert to installing.
+      if (state.sandboxStatus === 'ready' && action.payload === 'installing') {
+        return;
+      }
       state.sandboxStatus = action.payload;
     },
     setIsAIChatOpen: (state, action) => {

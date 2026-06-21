@@ -12,7 +12,7 @@ spec:
     - Egress
   
   ingress:
-    # Only allow ingress traffic from the router pod and ai-server pod
+    # Only allow ingress traffic from the router pod, ai-server pod, and sandbox pod
     - from:
         - podSelector:
             matchLabels:
@@ -20,6 +20,9 @@ spec:
         - podSelector:
             matchLabels:
               app: ai-server
+        - podSelector:
+            matchLabels:
+              app: sandbox
       ports:
         - protocol: TCP
           port: 5173

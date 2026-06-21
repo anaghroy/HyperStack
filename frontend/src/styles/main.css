@@ -3063,50 +3063,7 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 .settings-content .preference-item {
-  /* Webhook Input */
-}
-.settings-content .preference-item .webhook-input-group {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.settings-content .preference-item .webhook-input-group .webhook-input {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
-  padding: 8px 12px;
-  border-radius: 6px;
-  width: 280px;
-  font-size: 13px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.settings-content .preference-item .webhook-input-group .webhook-input:focus {
-  border-color: #3b82f6;
-}
-.settings-content .preference-item .webhook-input-group .webhook-input::-moz-placeholder {
-  color: rgba(255, 255, 255, 0.3);
-}
-.settings-content .preference-item .webhook-input-group .webhook-input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
-}
-.settings-content .preference-item .webhook-input-group .webhook-save-btn {
-  background: #3b82f6;
-  color: #fff;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  transition: background 0.2s;
-  height: 35px;
-  display: flex;
-  align-items: center;
-}
-.settings-content .preference-item .webhook-input-group .webhook-save-btn:hover {
-  background: #2563eb;
-}
+
 
 .connect-repo-wrapper {
   display: flex;

@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
     city: { type: String, default: "" },
     dob: { type: String, default: "" },
     bio: { type: String, default: "", maxlength: 200 },
-    webhookUrl: { type: String, default: "" },
+
     twoFactorEnabled: { type: Boolean, default: false },
     emailNotifications: { type: Boolean, default: true }
 }, { timestamps: true });

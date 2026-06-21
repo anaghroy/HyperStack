@@ -15,7 +15,38 @@ const App = () => {
   return (
     <>
       <SocketListener />
-      <Toaster position="top-right" />
+      <Toaster 
+        position="top-right" 
+        toastOptions={{
+          style: {
+            background: '#0a0a0a',
+            color: '#fff',
+            borderLeft: '4px solid #fff',
+            borderRadius: '4px',
+            textTransform: 'uppercase',
+            fontSize: '12px',
+            fontWeight: '600',
+            letterSpacing: '1px',
+            padding: '12px 20px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+          },
+          success: {
+            iconTheme: {
+              primary: '#4ade80',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            style: {
+              borderLeft: '4px solid #ef4444',
+            },
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          }
+        }}
+      />
       <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />

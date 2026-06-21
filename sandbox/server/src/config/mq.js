@@ -13,7 +13,11 @@ export const connectRabbitMQ = async () => {
         
         const connection = await amqp.connect(uri);
         channel = await connection.createChannel();
-        await channel.assertQueue('auth_notification_queue', { durable: true });
+        await channel.assertQueue('auth_notification_queue_v2', { 
+            durable: true,
+            deadLetterExchange: "auth_notification_dlx",
+            deadLetterRoutingKey: "failed"
+        });
         console.log("Sandbox Service connected to RabbitMQ");
     } catch (error) {
         console.error("RabbitMQ connection failed:", error.message);
@@ -27,7 +31,7 @@ export const sendNotification = async (message) => {
         return;
     }
     try {
-        channel.sendToQueue('auth_notification_queue', Buffer.from(JSON.stringify(message)), { persistent: true });
+        channel.sendToQueue('auth_notification_queue_v2', Buffer.from(JSON.stringify(message)), { persistent: true });
     } catch (error) {
         console.error("Failed to send RabbitMQ message:", error.message);
     }

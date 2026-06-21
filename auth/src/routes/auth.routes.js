@@ -5,7 +5,6 @@ import {
   githubCallback,
   logout,
   getCurrentUser,
-  updateWebhook,
   updateProfile,
   updatePreferences,
   deleteAccount,
@@ -74,8 +73,6 @@ router.post("/logout", authMiddleware, logout);
 // Get current authenticated user details
 router.get("/me", authMiddleware, getCurrentUser);
 
-// Update user webhook
-router.put("/webhook", authMiddleware, updateWebhook);
 
 // Update user profile
 router.put("/profile", authMiddleware, upload.single("avatar"), updateProfile);

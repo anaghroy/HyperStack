@@ -480,21 +480,7 @@ export const getCurrentUser = async () => {
   }
 };
 
-export const updateWebhook = async (webhookUrl) => {
-  try {
-    const res = await apiFetch(`${API_BASE}/api/auth/webhook`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ webhookUrl }),
-    });
-    if (!res.ok) throw new Error("Failed to update webhook");
-    return await res.json();
-  } catch (error) {
-    console.error('Failed to update webhook:', error);
-    throw error;
-  }
-};
+
 
 export const logoutUser = async () => {
   try {

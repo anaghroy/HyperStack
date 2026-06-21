@@ -57,6 +57,13 @@ spec:
                 name: notification-service
                 port:
                   number: 4000
+          - pathType: Prefix
+            path: "/socket.io"
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 4000
 
     - host: "*.preview.localhost"
       http:

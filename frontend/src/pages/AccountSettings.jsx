@@ -15,7 +15,7 @@ const AccountSettings = () => {
 
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
-  const [webhookUrl, setWebhookUrl] = useState("");
+
   const [auditLogs, setAuditLogs] = useState([]);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ const AccountSettings = () => {
     if (user) {
       setTwoFactorEnabled(user.twoFactorEnabled || false);
       setEmailNotifications(user.emailNotifications ?? true);
-      setWebhookUrl(user.webhookUrl || "");
+
     }
   }, [user]);
 
@@ -74,18 +74,7 @@ const AccountSettings = () => {
     }
   };
 
-  const handleSaveWebhook = async () => {
-    try {
-      const resultAction = await dispatch(updatePreferences({ webhookUrl }));
-      if (updatePreferences.fulfilled.match(resultAction)) {
-        toast.success("Webhook URL saved successfully");
-      } else {
-        toast.error("Failed to save Webhook URL");
-      }
-    } catch (error) {
-      toast.error("An error occurred");
-    }
-  };
+
 
   const handleDeleteAccount = async () => {
     const confirmed = window.confirm("Are you absolutely sure you want to delete your account? This action cannot be undone and will delete all your projects.");
@@ -205,27 +194,7 @@ const AccountSettings = () => {
                 <span className="slider"></span>
               </label>
             </div>
-            <div className="preference-item">
-              <div className="pref-info">
-                <h4>Webhook Integration</h4>
-                <p>Send alerts to Discord or Slack</p>
-              </div>
-              <div className="webhook-input-group">
-                <input 
-                  type="text" 
-                  placeholder="https://discord.com/api/webhooks/..." 
-                  value={webhookUrl}
-                  onChange={(e) => setWebhookUrl(e.target.value)}
-                  className="webhook-input"
-                />
-                <button 
-                  onClick={handleSaveWebhook}
-                  className="webhook-save-btn"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
+
 
           </div>
 

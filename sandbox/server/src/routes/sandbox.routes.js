@@ -19,18 +19,22 @@ async function probeSandboxReadiness(podIp, port, userId, projectTitle) {
     try {
       await new Promise((resolve, reject) => {
         const socket = new net.Socket();
-        socket.setTimeout(1000);
+        
+        const timer = setTimeout(() => {
+          socket.destroy();
+          reject(new Error('timeout'));
+        }, 1000);
+
         socket.connect(port, podIp, () => {
+          clearTimeout(timer);
           socket.destroy();
           resolve();
         });
+        
         socket.on('error', (err) => {
+          clearTimeout(timer);
           socket.destroy();
           reject(err);
-        });
-        socket.on('timeout', () => {
-          socket.destroy();
-          reject(new Error('timeout'));
         });
       });
       

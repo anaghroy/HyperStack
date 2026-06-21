@@ -294,50 +294,6 @@
       }
     }
 
-    /* Webhook Input */
-    .webhook-input-group {
-      display: flex;
-      gap: 8px;
-      align-items: center;
 
-      .webhook-input {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #fff;
-        padding: 8px 12px;
-        border-radius: 6px;
-        width: 280px;
-        font-size: 13px;
-        outline: none;
-        transition: border-color 0.2s;
-
-        &:focus {
-          border-color: #3b82f6;
-        }
-
-        &::placeholder {
-          color: rgba(255, 255, 255, 0.3);
-        }
-      }
-
-      .webhook-save-btn {
-        background: #3b82f6;
-        color: #fff;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 500;
-        transition: background 0.2s;
-        height: 35px; // Matches the input height approximately
-        display: flex;
-        align-items: center;
-
-        &:hover {
-          background: #2563eb;
-        }
-      }
-    }
   }
 }

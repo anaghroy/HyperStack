@@ -186,85 +186,70 @@ Do not add any additional explanation or conversational text.`;
       { role: "user", content: userPrompt }
     ];
 
-    let responseText = "";
+    const dbModelsToTry = [modelName, "cohere", "mistral", "deepseek", "qwen", "minimax"];
+    let parsedData = null;
     let finalTokens = 300;
-
-    try {
-      console.log(`Calling DB Schema Model: ${modelName}`);
-      const response = await model.invoke(messages);
-      responseText = response.content.trim();
-      finalTokens = response.tokens || 300;
-    } catch (primaryErr) {
-      console.warn(`Primary DB model (${modelName}) failed:`, primaryErr.message);
-      
-      const dbFallbackModels = ["cohere", "mistral", "deepseek", "qwen", "minimax"];
-      let success = false;
-      
-      for (const fallback of dbFallbackModels) {
-        if (fallback === modelName) continue;
+    
+    for (const currentModelName of dbModelsToTry) {
+      try {
+        console.log(`Calling DB Schema Model: ${currentModelName}`);
+        const currentModel = getModel(currentModelName);
+        const response = await currentModel.invoke(messages);
+        let responseText = response.content.trim();
+        finalTokens = response.tokens || 300;
+        
+        if (responseText.startsWith("```json")) {
+          responseText = responseText.replace(/^```json\n/, "").replace(/\n```$/, "");
+        }
+        
+        let jsonContent = responseText;
+        const firstBrace = jsonContent.indexOf('{');
+        const lastBrace = jsonContent.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          jsonContent = jsonContent.substring(firstBrace, lastBrace + 1);
+        }
         
         try {
-          console.log(`Trying fallback DB model: ${fallback}`);
-          const fbModel = getModel(fallback);
-          const fbResponse = await fbModel.invoke(messages);
-          responseText = fbResponse.content.trim();
-          finalTokens = fbResponse.tokens || 300;
-          success = true;
-          console.log(`${fallback} successfully generated DB schema!`);
-          break;
-        } catch (fbErr) {
-          console.warn(`${fallback} fallback failed:`, fbErr.message);
+          parsedData = JSON.parse(jsonContent);
+          if (parsedData.code && parsedData.mermaid) {
+             console.log(`${currentModelName} successfully generated DB schema!`);
+             break; // Success!
+          }
+        } catch (parseError) {
+          console.warn(`${currentModelName} failed JSON parse, attempting markdown extraction...`);
+          const mermaidMatch = responseText.match(/```mermaid([\s\S]*?)```/i);
+          const mermaidStr = mermaidMatch ? mermaidMatch[1].trim() : "";
+          
+          const codeMatches = [...responseText.matchAll(/```(\w*)([\s\S]*?)```/gi)];
+          let codeStr = "";
+          for (const match of codeMatches) {
+            const lang = (match[1] || "").toLowerCase();
+            if (lang !== "mermaid" && lang !== "json") {
+                codeStr = match[2].trim();
+                break;
+            }
+          }
+          
+          if (codeStr || mermaidStr) {
+            parsedData = {
+              code: codeStr || "// Schema could not be extracted",
+              mermaid: mermaidStr || "erDiagram\n    ERROR ||--o{ ERROR : missing_diagram"
+            };
+            console.log(`${currentModelName} successfully generated DB schema via markdown!`);
+            break; // Success!
+          } else {
+            throw new Error("Invalid JSON and no markdown blocks found");
+          }
         }
+      } catch (err) {
+        console.warn(`Model ${currentModelName} failed:`, err.message);
+        // Continue to next model
       }
-      
-      if (!success) {
-        throw new Error("All AI models failed to generate DB schema.");
-      }
-    }
-
-    // In case the LLM outputs markdown block for JSON, clean it
-    if (responseText.startsWith("```json")) {
-      responseText = responseText.replace(/^```json\n/, "").replace(/\n```$/, "");
     }
     
-    let parsedData;
-    try {
-      // Forcefully extract JSON if wrapped in conversational text
-      let jsonContent = responseText;
-      const firstBrace = jsonContent.indexOf('{');
-      const lastBrace = jsonContent.lastIndexOf('}');
-      if (firstBrace !== -1 && lastBrace !== -1) {
-        jsonContent = jsonContent.substring(firstBrace, lastBrace + 1);
-      }
-      parsedData = JSON.parse(jsonContent);
-    } catch (parseError) {
-      console.warn("Failed to parse DB schema JSON, attempting manual markdown extraction...");
-      
-      // Fallback: The AI ignored JSON instructions and just sent markdown blocks
-      const mermaidMatch = responseText.match(/```mermaid([\s\S]*?)```/i);
-      const mermaidStr = mermaidMatch ? mermaidMatch[1].trim() : "";
-      
-      // Try to find the DB code block (ignoring mermaid/json)
-      const codeMatches = [...responseText.matchAll(/```(\w*)([\s\S]*?)```/gi)];
-      let codeStr = "";
-      for (const match of codeMatches) {
-        const lang = (match[1] || "").toLowerCase();
-        if (lang !== "mermaid" && lang !== "json") {
-            codeStr = match[2].trim();
-            break;
-        }
-      }
-      
-      // If we couldn't find code blocks, fail
-      if (!codeStr && !mermaidStr) {
-        console.error("Total parse failure. Raw text:", responseText);
-        return res.status(500).json({ error: "LLM returned invalid format" });
-      }
-      
-      parsedData = {
-        code: codeStr || "// Schema could not be extracted",
-        mermaid: mermaidStr || "erDiagram\n    ERROR ||--o{ ERROR : missing_diagram"
-      };
+    if (!parsedData) {
+      console.error("All DB models failed to generate valid schema.");
+      return res.status(500).json({ error: "All AI models failed to generate DB schema." });
     }
 
     // Track tokens

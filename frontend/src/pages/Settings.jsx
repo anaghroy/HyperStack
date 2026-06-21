@@ -22,7 +22,7 @@ const Settings = () => {
   const [city, setCity] = useState('');
   const [dob, setDob] = useState('');
   const [bio, setBio] = useState('');
-  const [webhookUrl, setWebhookUrl] = useState('');
+
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
 
@@ -33,7 +33,7 @@ const Settings = () => {
       setCity(user.city || '');
       setDob(user.dob ? new Date(user.dob).toISOString().split('T')[0] : '');
       setBio(user.bio || '');
-      setWebhookUrl(user.webhookUrl || '');
+
       setAvatarPreview(user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=random`);
     }
   }, [user]);
@@ -66,7 +66,7 @@ const Settings = () => {
       formData.append('city', city);
       formData.append('dob', dob);
       formData.append('bio', bio);
-      formData.append('webhookUrl', webhookUrl);
+
       if (avatarFile) {
         formData.append('avatar', avatarFile);
       }
@@ -267,20 +267,7 @@ const Settings = () => {
                   </div>
                 </div>
 
-                {/* Webhook URL */}
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>Webhook URL (Optional)</label>
-                  <div className="input-wrapper">
-                    <input 
-                      type="url" 
-                      placeholder="https://hooks.slack.com/services/..."
-                      value={webhookUrl}
-                      onChange={(e) => setWebhookUrl(e.target.value)}
-                      disabled={!isEditing}
-                      style={{ paddingLeft: '16px' }}
-                    />
-                  </div>
-                </div>
+
               </div>
 
               {/* Bio */}

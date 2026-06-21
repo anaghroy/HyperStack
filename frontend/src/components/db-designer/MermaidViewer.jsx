@@ -27,10 +27,13 @@ const MermaidViewer = ({ chart }) => {
     const renderChart = async () => {
       if (!chart) return;
       
+      // Generate a unique ID for the mermaid render
+      const id = `mermaid-svg-${Math.random().toString(36).substring(2, 9)}`;
+      
       try {
         setError(null);
-        // Generate a unique ID for the mermaid render
-        const id = `mermaid-svg-${Math.random().toString(36).substring(2, 9)}`;
+        // Pre-validate syntax before rendering to prevent aggressive error injection
+        await mermaid.parse(chart);
         const { svg } = await mermaid.render(id, chart);
         
         if (isMounted) {
@@ -47,6 +50,12 @@ const MermaidViewer = ({ chart }) => {
         const errorNode = document.getElementById(id);
         if (errorNode) {
           errorNode.remove();
+        }
+        
+        // Sometimes it appends with 'd' prefix
+        const dErrorNode = document.getElementById('d' + id);
+        if (dErrorNode) {
+          dErrorNode.remove();
         }
         
         if (isMounted) {
